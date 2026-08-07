@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
-project(data-logger VERSION 1.0.0 LANGUAGES CXX)
+project(solution VERSION 1.0.0 LANGUAGES CXX)
 
 # Настройки компилятора
 set(CMAKE_CXX_STANDARD 17)
@@ -33,9 +33,4 @@ add_subdirectory(library)
 # Связывание с библиотеками
 target_link_libraries(data-logger PUBLIC
     library::DAQNavi
-)
-
-# Подключение заголовочных файлов
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/application/data-logger/inc
 )
