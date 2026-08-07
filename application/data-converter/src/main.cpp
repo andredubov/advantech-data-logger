@@ -35,10 +35,14 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Устанавливаем локаль для использования запятой как десятичного разделителя
+    csvFile.imbue(std::locale("Russian"));
+
     // Записываем шапку таблицы CSV
-    csvFile << "Time(s),Voltage(V)\n";
+    csvFile << "Time(s);Voltage(V)\n";
 
     // Настраиваем высокую точность вывода чисел с плавающей точкой (6 знаков после запятой)
+    // Для времени знак не нужен, для напряжения — нужен, поэтому показываем знак только для конкретного значения
     csvFile << std::fixed << std::setprecision(6);
 
     std::printf("Conversion started, please wait...\n");
@@ -52,7 +56,7 @@ int main()
     {
         // Вычисляем, сколько точек осталось прочитать в текущем блоке
         std::size_t toRead = std::min(chunkSize, totalSamples - samplesProcessed);
-        
+
         // Читаем блок из бинарного файла
         binFile.read(reinterpret_cast<char*>(buffer.data()), toRead * sizeof(double));
 
@@ -62,8 +66,8 @@ int main()
             // Вычисляем время от начала эксперимента для каждой точки
             double currentTime = (samplesProcessed + i) * timeStep;
 
-            // Записываем строку: Время, Значение
-            csvFile << currentTime << "," << buffer[i] << "\n";
+            // Записываем строку: Время (без знака), Значение (со знаком)
+            csvFile << currentTime << ";" << std::showpos << buffer[i] << std::noshowpos << "\n";
         }
 
         samplesProcessed += toRead;
