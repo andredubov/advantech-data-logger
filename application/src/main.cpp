@@ -99,6 +99,7 @@ int main()
         std::printf("Initialization error: Device not found in system!\n");
         std::printf("Check device name and BoardID in Advantech Navigator utility.\n");
         aiCtrl->Dispose();
+
         return EXIT_FAILURE;
     }
 
@@ -121,7 +122,7 @@ int main()
 
     // Программный старт железного сбора данных на плате
     Automation::BDaq::ErrorCode ret = aiCtrl->Prepare();
-    if (Automation::BDaq::Success == ret) {    
+    if (Automation::BDaq::Success == ret) {
         ret = aiCtrl->Start();
     }
 
@@ -131,6 +132,7 @@ int main()
         queueCV.notify_one();
         fileThread.join();
         aiCtrl->Dispose();
+
         return EXIT_FAILURE;
     }
 
