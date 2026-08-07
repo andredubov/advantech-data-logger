@@ -1,85 +1,168 @@
 #include "main.hpp"
 
-using namespace Automation::BDaq;
+// --- НАСТРОЙКИ СБОРА ДАННЫХ ---
+// const wchar_t* deviceDescription = L"PCI-1716,BID#0";
+const wchar_t* deviceDescription = L"DemoDevice,BID#0";
+const Automation::BDaq::int32 startChannel = 0;
+const Automation::BDaq::int32 channelCount = 1;
+const double samplingRate = 250000.0; // Максимальная частота 250 кГц
+const Automation::BDaq::int32 samplesPerChannel = 25000; // Забираем данные пачками по 25 000 точек (10 раз в сек)
 
-// Константы для настройки сбора данных
-// const wchar_t* deviceDescription = L"PCI-1716,BID#0"; // Имя устройства из Advantech Navigator
-const wchar_t* deviceDescription = L"DemoDevice,BID#0"; // Имя устройства из Advantech Navigator
-const int32 startChannel = 0;                        // Начальный канал
-const int32 channelCount = 1;                        // Количество опрашиваемых каналов
-const int32 samplesPerChannel = 1000;                // Размер буфера на один канал
-const double samplingRate = 10000.0;                 // Частота дискретизации (Гц)
+// --- ПОТОКОБЕЗОПАСНАЯ ОЧЕРЕДЬ ---
+std::queue<std::vector<double>> dataQueue;
+std::mutex queueMutex;
+std::condition_variable queueCV;
+bool isRunning = true;
 
-// Обработчик события заполнения буфера (Callback)
-void BDAQCALL OnDataReadyEvent(void* sender, BfdAiEventArgs* args, void* userParam)
+// --- 1. ПОТОК СВЕРХБЫСТРОЙ ЗАПИСИ В БИНАРНЫЙ ФАЙЛ ---
+void DataProcessingThread()
 {
-    BufferedAiCtrl* aiCtrl = (BufferedAiCtrl*)sender;
+    // Создаем или перезаписываем бинарный файл в папке запуска приложения
+    std::ofstream outFile("daq_data_250khz.bin", std::ios::binary | std::ios::out);
 
-    // Получаем точное количество сэмплов, подготовленных драйвером
-    int32 count = args->Count; 
+    if (!outFile.is_open()) {
+        std::printf("[File Thread] Critical error: Failed to create file for writing!\n");
+        return;
+    }
 
-    // Выделяем память под данные текущей пачки
-    double* dataBuffer = new double[count];
+    std::printf("[Writer Thread] Binary file daq_data_250khz.bin opened successfully.\n");
 
-    // В C++ SDK метод GetData принимает всего 2 параметра: 
-    // 1. Сколько данных забрать (count)
-    // 2. Указатель на массив (dataBuffer)
-    ErrorCode ret = aiCtrl->GetData(count, dataBuffer);
-
-    if (ret == Success)
+    while (true)
     {
-        // Output the first sample value to console
-        // dataBuffer[0] is the first voltage reading (in Volts)
-        std::printf("Read %06d samples. ", count);
-        std::printf("Current voltage on CH0: %.3f V\n", dataBuffer[0]);
+        std::vector<double> localBuffer;
+
+        // Потокобезопасное извлечение пачки данных из очереди
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            queueCV.wait(lock, [] { return !dataQueue.empty() || !isRunning; });
+
+            // Если сбор остановлен главным потоком и очередь пуста — завершаем работу
+            if (!isRunning && dataQueue.empty()) {
+                break; 
+            }
+
+            localBuffer = std::move(dataQueue.front());
+            dataQueue.pop();
+        }
+
+        // Высокоскоростное сохранение "сырого" буфера double на диск
+        if (!localBuffer.empty()) 
+        {
+            std::streamsize bytesToWrite = localBuffer.size() * sizeof(double);
+            outFile.write(reinterpret_cast<const char*>(localBuffer.data()), bytesToWrite);
+
+            // Проверка на случай переполнения накопителя ПК
+            if (!outFile) {
+                std::printf("[Writer Thread] Critical error: Physical disk write failure!\n");
+            }
+        }
     }
 
-    // Обязательно освобождаем выделенную память
-    delete[] dataBuffer;
+    outFile.close();
+
+    std::printf("[Writer Thread] All data flushed to disk successfully. File closed.\n");
 }
-int main(int argc, char* argv[])
+
+// --- 2. ФУНКЦИЯ ОБРАТНОГО ВЫЗОВА (Callback от драйвера) ---
+// Вызывается автоматически в изолированном высокоприоритетном потоке Advantech
+void BDAQCALL OnDataReadyEvent(void* sender, Automation::BDaq::BfdAiEventArgs* args, void* userParam)
 {
-    // Инициализация контроллера буферизированного ввода
-    BufferedAiCtrl* aiCtrl = BufferedAiCtrl::Create();
-    
-    // 1. Привязка к физическому устройству
-    DeviceInformation devInfo(deviceDescription);
-    ErrorCode ret = aiCtrl->setSelectedDevice(devInfo);
-    if (BioFailed(ret)) {
-        std::printf("Error: Failed to open device. Code: %d\n", ret);
+    Automation::BDaq::BufferedAiCtrl* aiCtrl = (Automation::BDaq::BufferedAiCtrl*)sender;
+
+    // Получаем точное количество отсчетов, готовых к считыванию из FIFO платы
+    Automation::BDaq::int32 count = args->Count;
+
+    // Выделяем память под временный вектор
+    std::vector<double> rawData(count);
+
+    // Забираем данные из FIFO-буфера драйвера в наш вектор (C++ API принимает 2 аргумента)
+    Automation::BDaq::ErrorCode ret = aiCtrl->GetData(count, rawData.data());
+
+    if (Automation::BDaq::Success == ret)
+    {
+        // Молниеносно перемещаем данные в очередь и будим рабочий поток записи
+        std::lock_guard<std::mutex> lock(queueMutex);
+        dataQueue.push(std::move(rawData));
+        queueCV.notify_one();
+    }
+}
+
+// --- 3. ГЛАВНЫЙ ПОТОК ПРИЛОЖЕНИЯ ---
+int main()
+{
+    // Создаем экземпляр контроллера буферизированного ввода
+    Automation::BDaq::BufferedAiCtrl* aiCtrl = Automation::BDaq::BufferedAiCtrl::Create();
+    Automation::BDaq::DeviceInformation devInfo(deviceDescription);
+
+    // 1. Привязка к физическому слоту платы PCI-1716
+    if (BioFailed(aiCtrl->setSelectedDevice(devInfo))) {
+        std::printf("Initialization error: Device not found in system!\n");
+        std::printf("Check device name and BoardID in Advantech Navigator utility.\n");
         aiCtrl->Dispose();
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    // 2. Настройка параметров сканирования каналов
+    // 2. Параметризация АЦП-сканирования (Настройки для 250 кГц)
     aiCtrl->getScanChannel()->setChannelStart(startChannel);
     aiCtrl->getScanChannel()->setChannelCount(channelCount);
     aiCtrl->getScanChannel()->setSamples(samplesPerChannel);
     aiCtrl->getConvertClock()->setRate(samplingRate);
 
-    // 3. Подключение функции обратного вызова (обработчик прерывания буфера)
+    // Задаем циклический буфер в ОЗУ ПК на 1 000 000 отсчетов для защиты от микрозависаний ОС.
+    // Драйвер Advantech автоматически настроит шину PCI на DMA-передачу в эту область.
+    // aiCtrl->getBuffer()->setLength(1000000);
+
+    // 3. Подключаем функцию обработки прерываний буфера
     aiCtrl->addDataReadyHandler(OnDataReadyEvent, nullptr);
 
-    // 4. Запуск сбора данных
-    ret = aiCtrl->Prepare();
-    if (ret == Success) {
+    // Запуск параллельного потока записи на диск
+    isRunning = true;
+    std::thread fileThread(DataProcessingThread);
+
+    // Программный старт железного сбора данных на плате
+    Automation::BDaq::ErrorCode ret = aiCtrl->Prepare();
+    if (Automation::BDaq::Success == ret) {    
         ret = aiCtrl->Start();
     }
 
     if (BioFailed(ret)) {
-        std::printf("Error starting data acquisition. Code: %d\n", ret);
+        std::printf("Critical error: Failed to start ADC. Error code: %d\n", ret);
+        isRunning = false;
+        queueCV.notify_one();
+        fileThread.join();
         aiCtrl->Dispose();
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    std::printf("Data acquisition started. Press ENTER to stop...\n");
+    std::printf("\n========================================================\n");
+    std::printf("Data acquisition from PCI-1716 at 250 kHz STARTED.\n");
+    std::printf("Data is continuously written to binary file...\n");
+    std::printf("Press ENTER to stop the program safely.\n");
+    std::printf("========================================================\n\n");
+    
+    // Ожидаем действия от пользователя в консоли
     std::cin.get(); 
 
-    // 5. Остановка и освобождение ресурсов
+    // Процедура корректной остановки оборудования и потоков
+    std::printf("Stopping data acquisition on device...\n");
     aiCtrl->Stop();
+
+    // Сигнализируем файловому потоку, что новых данных больше не будет
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        isRunning = false;
+    }
+    queueCV.notify_one();
+
+    // Синхронизируем закрытие потока записи
+    if (fileThread.joinable()) {
+        fileThread.join();
+    }
+
+    // Освобождаем дескриптор платы в системе
     aiCtrl->Dispose();
 
-    std::printf("Application finished successfully.\n");
+    std::printf("Program finished successfully. All resources released.\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 }

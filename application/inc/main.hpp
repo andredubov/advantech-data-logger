@@ -1,4 +1,10 @@
 #include <windows.h>
 #include <iostream>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <fstream>
+#include <condition_variable>
 #include "bdaqctrl.h"
 #include "compatibility.h"
