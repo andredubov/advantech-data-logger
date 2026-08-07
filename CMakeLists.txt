@@ -4,7 +4,7 @@ project(data-logger VERSION 1.0.0 LANGUAGES CXX)
 
 # Настройки компилятора
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON) 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(MSVC)
@@ -24,31 +24,18 @@ else()
     endif()
 endif()
 
-# Исходные файлы
-file(GLOB APPLICATION_SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/application/src/*.cpp
-)
-
-# Добавление исполняемого файла
-add_executable(${PROJECT_NAME} ${APPLICATION_SOURCES})
+# Добавление поддиректорий с приложениями
+add_subdirectory(application/data-logger)
+add_subdirectory(application/data-converter)
 
 add_subdirectory(library)
 
 # Связывание с библиотеками
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(data-logger PUBLIC
     library::DAQNavi
 )
 
-# target_link_libraries(library INTERFACE
-#     library::DAQNavi
-# )
-
-
-
-
-# Связывание с библиотеками
-
 # Подключение заголовочных файлов
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/application/inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/application/data-logger/inc
 )
