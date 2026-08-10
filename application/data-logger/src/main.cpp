@@ -1,4 +1,6 @@
 #include "main.hpp"
+#include <chrono>
+#include <cstdint>
 
 // --- НАСТРОЙКИ СБОРА ДАННЫХ ---
 // const wchar_t* deviceDescription = L"PCI-1716,BID#0";
@@ -13,6 +15,7 @@ std::queue<std::vector<double>> dataQueue;
 std::mutex queueMutex;
 std::condition_variable queueCV;
 bool isRunning = true;
+double g_startTimeSeconds = 0.0; // Глобальное время старта для потока записи
 
 // --- 1. ПОТОК СВЕРХБЫСТРОЙ ЗАПИСИ В БИНАРНЫЙ ФАЙЛ ---
 void DataProcessingThread()
@@ -30,12 +33,22 @@ void DataProcessingThread()
     // --- ЗАПИСЬ ЗАГОЛОВКА ФАЙЛА ---
     // Магическое число для идентификации формата
     const uint32_t magic = 0x50434931; // "PCI1"
-    const uint32_t version = 1;
+    const uint32_t version = 2; // Увеличиваем версию из-за добавления времени старта
     const double samplingRateLocal = samplingRate;
+
+    // Получаем абсолютное время старта с высокой точностью
+    const auto startTimePoint = std::chrono::system_clock::now();
+    g_startTimeSeconds = std::chrono::duration<double>(startTimePoint.time_since_epoch()).count();
+    double endTimeSeconds = 0.0; // Будет заполнено при завершении
 
     outFile.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
     outFile.write(reinterpret_cast<const char*>(&version), sizeof(version));
     outFile.write(reinterpret_cast<const char*>(&samplingRateLocal), sizeof(samplingRateLocal));
+    outFile.write(reinterpret_cast<const char*>(&g_startTimeSeconds), sizeof(g_startTimeSeconds));
+    // Запоминаем позицию для записи времени окончания
+    std::streampos endTimePos = outFile.tellp();
+    // Временно записываем 0, позже перезапишем на фактическое время окончания
+    outFile.write(reinterpret_cast<const char*>(&endTimeSeconds), sizeof(endTimeSeconds));
 
     if (!outFile) {
         std::printf("[Writer Thread] Critical error: Failed to write file header!\n");
@@ -43,7 +56,7 @@ void DataProcessingThread()
         return;
     }
 
-    std::printf("[Writer Thread] File header written successfully.\n");
+    std::printf("[Writer Thread] File header written successfully. Start time: %.6f s since epoch.\n", g_startTimeSeconds);
 
     // Счетчик записанных точек для вычисления времени
     uint64_t totalSamplesWritten = 0;
@@ -77,7 +90,8 @@ void DataProcessingThread()
 
             const double timeStep = 1.0 / samplingRate;
             for (size_t i = 0; i < localBuffer.size(); ++i) {
-                double currentTime = (totalSamplesWritten + i) * timeStep;
+                // Абсолютное время: время старта + смещение от начала сбора
+                double currentTime = g_startTimeSeconds + (totalSamplesWritten + i) * timeStep;
                 timedData.push_back(currentTime);
                 timedData.push_back(localBuffer[i]);
             }
@@ -94,9 +108,21 @@ void DataProcessingThread()
         }
     }
 
+    // Запись времени окончания в заголовок файла
+    const auto endTimePoint = std::chrono::system_clock::now();
+    endTimeSeconds = std::chrono::duration<double>(endTimePoint.time_since_epoch()).count();
+
+    outFile.seekp(endTimePos);
+    outFile.write(reinterpret_cast<const char*>(&endTimeSeconds), sizeof(endTimeSeconds));
+    if (!outFile) {
+        std::printf("[Writer Thread] Warning: Failed to write end time to file header!\n");
+    }
+    outFile.seekp(0, std::ios::end);
+
     outFile.close();
 
     std::printf("[Writer Thread] All data flushed to disk successfully. Total samples: %llu. File closed.\n", totalSamplesWritten);
+    std::printf("[Writer Thread] End time: %.6f s since epoch.\n", endTimeSeconds);
 }
 
 // --- 2. ФУНКЦИЯ ОБРАТНОГО ВЫЗОВА (Callback от драйвера) ---
@@ -177,7 +203,7 @@ int main()
     std::printf("Data is continuously written to binary file...\n");
     std::printf("Press ENTER to stop the program safely.\n");
     std::printf("========================================================\n\n");
-    
+
     // Ожидаем действия от пользователя в консоли
     std::cin.get(); 
 

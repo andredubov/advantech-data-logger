@@ -6,5 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <condition_variable>
+#include <cstdint>
+#include <chrono>
 #include "bdaqctrl.h"
 #include "compatibility.h"
