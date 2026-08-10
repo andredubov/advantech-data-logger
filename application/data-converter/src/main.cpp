@@ -20,6 +20,7 @@ int main()
     uint32_t magic = 0;
     uint32_t version = 0;
     double samplingRate = 0.0;
+    double startTimeSeconds = 0.0;
 
     binFile.read(reinterpret_cast<char*>(&magic), sizeof(magic));
     binFile.read(reinterpret_cast<char*>(&version), sizeof(version));
@@ -37,7 +38,17 @@ int main()
         return EXIT_FAILURE;
     }
 
-    if (version != 1) {
+    double endTimeSeconds = 0.0;
+    if (version == 2) {
+        // Читаем время старта и окончания для версии 2
+        binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
+        binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
+        if (!binFile) {
+            std::printf("Error: Failed to read start/end time from header!\n");
+            binFile.close();
+            return EXIT_FAILURE;
+        }
+    } else if (version != 1) {
         std::printf("Error: Unsupported file version: %u\n", version);
         binFile.close();
         return EXIT_FAILURE;
@@ -46,6 +57,9 @@ int main()
     std::printf("File opened successfully.\n");
     std::printf("Format version: %u\n", version);
     std::printf("Sampling rate: %.0f Hz\n", samplingRate);
+    if (version == 2) {
+        std::printf("Start time (absolute): %.6f s since epoch\n", startTimeSeconds);
+    }
 
     // Определяем количество точек (каждая точка = пара double: time + voltage)
     std::streamsize dataStartPos = binFile.tellg();
@@ -69,8 +83,13 @@ int main()
         return EXIT_FAILURE;
     }
 
-    csvFile.imbue(std::locale("Russian"));
-    csvFile << "Time(s);Voltage(V)\n";
+    // Используем стандартную локаль "C" для предсказуемого формата чисел (точка как разделитель)
+    csvFile.imbue(std::locale("C"));
+    if (version == 2) {
+        csvFile << "Absolute Time(s);Voltage(V)\n";
+    } else {
+        csvFile << "Time(s);Voltage(V)\n";
+    }
     csvFile << std::fixed << std::setprecision(6);
 
     std::printf("Conversion started, please wait...\n");
@@ -91,6 +110,9 @@ int main()
         {
             double currentTime = buffer[i * 2];
             double voltage = buffer[i * 2 + 1];
+
+            // В версии 2 время уже абсолютное, ничего не добавляем
+            // В версии 1 время было относительным (начиналось с 0)
 
             csvFile << currentTime << ";" << std::showpos << voltage << std::noshowpos << "\n";
         }
