@@ -1,11 +1,8 @@
 #include "main.hpp"
+#include <cstdint>
 
 int main()
 {
-    // Настройки исходных данных (должны строго совпадать с параметрами сбора)
-    const double samplingRate = 250000.0; // 250 кГц
-    const double timeStep = 1.0 / samplingRate; // Шаг времени между точками (4 микросекунды)
-
     const std::string binaryFileName = "daq_data_250khz.bin";
     const std::string csvFileName = "daq_data.csv";
 
@@ -13,66 +10,93 @@ int main()
     std::ifstream binFile(binaryFileName, std::ios::binary | std::ios::ate);
     if (!binFile.is_open()) {
         std::printf("Error: Failed to open binary file %s\n", binaryFileName.c_str());
-
         return EXIT_FAILURE;
     }
 
-    // Определяем размер файла и количество точек double
     std::streamsize fileSize = binFile.tellg();
     binFile.seekg(0, std::ios::beg);
-    std::size_t totalSamples = fileSize / sizeof(double);
+
+    // --- ЧТЕНИЕ ЗАГОЛОВКА ---
+    uint32_t magic = 0;
+    uint32_t version = 0;
+    double samplingRate = 0.0;
+
+    binFile.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    binFile.read(reinterpret_cast<char*>(&version), sizeof(version));
+    binFile.read(reinterpret_cast<char*>(&samplingRate), sizeof(samplingRate));
+
+    if (!binFile) {
+        std::printf("Error: Failed to read file header!\n");
+        binFile.close();
+        return EXIT_FAILURE;
+    }
+
+    if (magic != 0x50434931) {
+        std::printf("Error: Invalid file format (magic number mismatch). Expected 0x%X, got 0x%X\n", 0x50434931, magic);
+        binFile.close();
+        return EXIT_FAILURE;
+    }
+
+    if (version != 1) {
+        std::printf("Error: Unsupported file version: %u\n", version);
+        binFile.close();
+        return EXIT_FAILURE;
+    }
 
     std::printf("File opened successfully.\n");
-    std::printf("Binary file size: %lld bytes.\n", fileSize);
+    std::printf("Format version: %u\n", version);
+    std::printf("Sampling rate: %.0f Hz\n", samplingRate);
+
+    // Определяем количество точек (каждая точка = пара double: time + voltage)
+    std::streamsize dataStartPos = binFile.tellg();
+    std::streamsize dataSize = fileSize - dataStartPos;
+    std::size_t totalSamples = dataSize / (2 * sizeof(double));
+
+    std::printf("Binary data size: %lld bytes.\n", dataSize);
     std::printf("Number of samples: %zu\n", totalSamples);
+
+    if (totalSamples == 0) {
+        std::printf("Warning: No data samples found in file.\n");
+        binFile.close();
+        return EXIT_SUCCESS;
+    }
 
     // 2. Открываем CSV файл для записи
     std::ofstream csvFile(csvFileName);
     if (!csvFile.is_open()) {
         std::printf("Error: Failed to create CSV file %s\n", csvFileName.c_str());
         binFile.close();
-
         return EXIT_FAILURE;
     }
 
-    // Устанавливаем локаль для использования запятой как десятичного разделителя
     csvFile.imbue(std::locale("Russian"));
-
-    // Записываем шапку таблицы CSV
     csvFile << "Time(s);Voltage(V)\n";
-
-    // Настраиваем высокую точность вывода чисел с плавающей точкой (6 знаков после запятой)
-    // Для времени знак не нужен, для напряжения — нужен, поэтому показываем знак только для конкретного значения
     csvFile << std::fixed << std::setprecision(6);
 
     std::printf("Conversion started, please wait...\n");
 
-    // 3. Чтение и конвертация блоками (чтобы не перегружать ОЗУ, если файл огромный)
-    const std::size_t chunkSize = 25000; // Читаем пачками по 25 000 точек
-    std::vector<double> buffer(chunkSize);
+    // 3. Чтение и конвертация парами (time, voltage)
+    const std::size_t chunkSize = 25000; // Количество точек за раз
+    std::vector<double> buffer(chunkSize * 2); // Два double на точку
     std::size_t samplesProcessed = 0;
 
     while (samplesProcessed < totalSamples)
     {
-        // Вычисляем, сколько точек осталось прочитать в текущем блоке
         std::size_t toRead = std::min(chunkSize, totalSamples - samplesProcessed);
+        std::streamsize bytesToRead = toRead * 2 * sizeof(double);
 
-        // Читаем блок из бинарного файла
-        binFile.read(reinterpret_cast<char*>(buffer.data()), toRead * sizeof(double));
+        binFile.read(reinterpret_cast<char*>(buffer.data()), bytesToRead);
 
-        // Записываем считанный блок в CSV
         for (std::size_t i = 0; i < toRead; ++i)
         {
-            // Вычисляем время от начала эксперимента для каждой точки
-            double currentTime = (samplesProcessed + i) * timeStep;
+            double currentTime = buffer[i * 2];
+            double voltage = buffer[i * 2 + 1];
 
-            // Записываем строку: Время (без знака), Значение (со знаком)
-            csvFile << currentTime << ";" << std::showpos << buffer[i] << std::noshowpos << "\n";
+            csvFile << currentTime << ";" << std::showpos << voltage << std::noshowpos << "\n";
         }
 
         samplesProcessed += toRead;
 
-        // Выводим прогресс в консоль
         int progress = static_cast<int>((static_cast<double>(samplesProcessed) / totalSamples) * 100);
         std::printf("\rProgress: %d%% (%zu/%zu)", progress, samplesProcessed, totalSamples);
     }
