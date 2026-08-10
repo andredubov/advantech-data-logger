@@ -1,0 +1,62 @@
+# AI Agent Instructions
+
+This file helps AI coding agents understand the PCI-1716 data acquisition project and be immediately productive.
+
+## Project Overview
+
+C++ application suite for high-speed data acquisition (250 kHz) using Advantech PCI-1716 analog input card. See [README.md](README.md) for full details.
+
+## Build Commands
+
+### Using build.bat (interactive)
+```bash
+build.bat
+```
+Prompts for configuration (Release/Debug), architecture (Win32/x64), and toolset (v140_xp through v143, ClangCL).
+
+### Using CMake directly
+```bash
+mkdir build
+cd build
+cmake .. -G "Visual Studio 17 2022" -A x64
+cmake --build . --config Release
+```
+
+### Build outputs
+- `build/application/data-logger/Release/data-logger.exe`
+- `build/application/data-converter/Release/data-converter.exe`
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `application/data-logger/src/main.cpp` | Real-time acquisition with multithreaded writer |
+| `application/data-converter/src/main.cpp` | Binary-to-CSV converter |
+| `library/DAQNavi/inc/bdaqctrl.h` | Advantech DAQNavi SDK interface |
+
+## Architecture Notes
+
+- **Data Logger**: Three threads — main (initialization/control), callback (hardware interrupt → queue push), writer (queue → binary file)
+- **Queue**: Uses `std::queue` + `std::mutex` + `std::condition_variable` for thread-safe handoff
+- **Callbacks**: `BDAQCALL` convention; runs in high-priority Advantech thread
+- **Data format**: Binary file stores raw `double` samples (no headers)
+- **Converter**: Reads binary file, computes timestamps from sampling rate, outputs CSV with Russian locale (comma decimal separator)
+
+## Critical Configuration
+
+Edit in `application/data-logger/src/main.cpp`:
+```cpp
+const wchar_t* deviceDescription = L"PCI-1716,BID#0";  // Or L"DemoDevice,BID#0" for simulation
+const double samplingRate = 250000.0;                  // Max 250 kHz
+const int32 samplesPerChannel = 25000;                 // Buffer size
+```
+
+## Common Issues
+
+1. **"Device not found"**: Verify Board ID in Advantech Navigator; update `deviceDescription`
+2. **Data loss**: Increase `aiCtrl->getBuffer()->setLength(1000000)`
+3. **CSV decimal separators**: Uses Russian locale (comma). Remove `csvFile.imbue(std::locale("Russian"))` for dot separator
+
+## Windows-Only
+
+This project targets Windows due to Advantech DAQNavi SDK limitations. Do not attempt cross-platform builds.
