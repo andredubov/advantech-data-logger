@@ -20,6 +20,7 @@ int main()
     uint32_t magic = 0;
     uint32_t version = 0;
     double samplingRate = 0.0;
+    uint32_t channelCount = 1; // По умолчанию 1 канал
     double startTimeSeconds = 0.0;
 
     binFile.read(reinterpret_cast<char*>(&magic), sizeof(magic));
@@ -40,11 +41,21 @@ int main()
 
     double endTimeSeconds = 0.0;
     if (version == 2) {
-        // Читаем время старта и окончания для версии 2
+        // Версия 2: время старта + время окончания
         binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
         binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
         if (!binFile) {
             std::printf("Error: Failed to read start/end time from header!\n");
+            binFile.close();
+            return EXIT_FAILURE;
+        }
+    } else if (version == 3) {
+        // Версия 3: channelCount + время старта + время окончания
+        binFile.read(reinterpret_cast<char*>(&channelCount), sizeof(channelCount));
+        binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
+        binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
+        if (!binFile) {
+            std::printf("Error: Failed to read channel count and start/end time from header!\n");
             binFile.close();
             return EXIT_FAILURE;
         }
@@ -57,20 +68,23 @@ int main()
     std::printf("File opened successfully.\n");
     std::printf("Format version: %u\n", version);
     std::printf("Sampling rate: %.0f Hz\n", samplingRate);
-    if (version == 2) {
+    if (version >= 2) {
+        std::printf("Channel count: %u\n", channelCount);
         std::printf("Start time (absolute): %.6f s since epoch\n", startTimeSeconds);
     }
 
-    // Определяем количество точек (каждая точка = пара double: time + voltage)
+    // Определяем количество кадров
     std::streamsize dataStartPos = binFile.tellg();
     std::streamsize dataSize = fileSize - dataStartPos;
-    std::size_t totalSamples = dataSize / (2 * sizeof(double));
+    std::size_t valuesPerFrame = (version >= 3) ? (1 + channelCount) : 2; // Версия 1-2: (time, voltage), Версия 3+: (time, ch0...chN)
+    std::size_t totalFrames = dataSize / (valuesPerFrame * sizeof(double));
 
     std::printf("Binary data size: %lld bytes.\n", dataSize);
-    std::printf("Number of samples: %zu\n", totalSamples);
+    std::printf("Values per frame: %zu\n", valuesPerFrame);
+    std::printf("Number of frames: %zu\n", totalFrames);
 
-    if (totalSamples == 0) {
-        std::printf("Warning: No data samples found in file.\n");
+    if (totalFrames == 0) {
+        std::printf("Warning: No data frames found in file.\n");
         binFile.close();
         return EXIT_SUCCESS;
     }
@@ -85,7 +99,14 @@ int main()
 
     // Используем стандартную локаль "C" для предсказуемого формата чисел (точка как разделитель)
     csvFile.imbue(std::locale("C"));
-    if (version == 2) {
+    if (version >= 3) {
+        // Многоканальный формат: время + каналы
+        csvFile << "Absolute Time(s)";
+        for (uint32_t ch = 0; ch < channelCount; ++ch) {
+            csvFile << ";Channel " << ch;
+        }
+        csvFile << "\n";
+    } else if (version == 2) {
         csvFile << "Absolute Time(s);Voltage(V)\n";
     } else {
         csvFile << "Time(s);Voltage(V)\n";
@@ -94,33 +115,34 @@ int main()
 
     std::printf("Conversion started, please wait...\n");
 
-    // 3. Чтение и конвертация парами (time, voltage)
-    const std::size_t chunkSize = 25000; // Количество точек за раз
-    std::vector<double> buffer(chunkSize * 2); // Два double на точку
-    std::size_t samplesProcessed = 0;
+    // 3. Чтение и конвертация кадров
+    const std::size_t chunkSize = 25000; // Количество кадров за раз
+    std::vector<double> buffer(chunkSize * valuesPerFrame);
+    std::size_t framesProcessed = 0;
 
-    while (samplesProcessed < totalSamples)
+    while (framesProcessed < totalFrames)
     {
-        std::size_t toRead = std::min(chunkSize, totalSamples - samplesProcessed);
-        std::streamsize bytesToRead = toRead * 2 * sizeof(double);
+        std::size_t toRead = std::min(chunkSize, totalFrames - framesProcessed);
+        std::streamsize bytesToRead = toRead * valuesPerFrame * sizeof(double);
 
         binFile.read(reinterpret_cast<char*>(buffer.data()), bytesToRead);
 
         for (std::size_t i = 0; i < toRead; ++i)
         {
-            double currentTime = buffer[i * 2];
-            double voltage = buffer[i * 2 + 1];
+            double currentTime = buffer[i * valuesPerFrame];
+            csvFile << currentTime;
 
-            // В версии 2 время уже абсолютное, ничего не добавляем
-            // В версии 1 время было относительным (начиналось с 0)
-
-            csvFile << currentTime << ";" << std::showpos << voltage << std::noshowpos << "\n";
+            for (std::size_t v = 1; v < valuesPerFrame; ++v) {
+                double value = buffer[i * valuesPerFrame + v];
+                csvFile << ";" << std::showpos << value << std::noshowpos;
+            }
+            csvFile << "\n";
         }
 
-        samplesProcessed += toRead;
+        framesProcessed += toRead;
 
-        int progress = static_cast<int>((static_cast<double>(samplesProcessed) / totalSamples) * 100);
-        std::printf("\rProgress: %d%% (%zu/%zu)", progress, samplesProcessed, totalSamples);
+        int progress = static_cast<int>((static_cast<double>(framesProcessed) / totalFrames) * 100);
+        std::printf("\rProgress: %d%% (%zu/%zu)", progress, framesProcessed, totalFrames);
     }
 
     // 4. Закрываем файлы
