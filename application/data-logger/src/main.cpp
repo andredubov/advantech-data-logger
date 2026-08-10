@@ -27,6 +27,27 @@ void DataProcessingThread()
 
     std::printf("[Writer Thread] Binary file daq_data_250khz.bin opened successfully.\n");
 
+    // --- ЗАПИСЬ ЗАГОЛОВКА ФАЙЛА ---
+    // Магическое число для идентификации формата
+    const uint32_t magic = 0x50434931; // "PCI1"
+    const uint32_t version = 1;
+    const double samplingRateLocal = samplingRate;
+
+    outFile.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+    outFile.write(reinterpret_cast<const char*>(&version), sizeof(version));
+    outFile.write(reinterpret_cast<const char*>(&samplingRateLocal), sizeof(samplingRateLocal));
+
+    if (!outFile) {
+        std::printf("[Writer Thread] Critical error: Failed to write file header!\n");
+        outFile.close();
+        return;
+    }
+
+    std::printf("[Writer Thread] File header written successfully.\n");
+
+    // Счетчик записанных точек для вычисления времени
+    uint64_t totalSamplesWritten = 0;
+
     while (true)
     {
         std::vector<double> localBuffer;
@@ -34,7 +55,9 @@ void DataProcessingThread()
         // Потокобезопасное извлечение пачки данных из очереди
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            queueCV.wait(lock, [] { return !dataQueue.empty() || !isRunning; });
+            queueCV.wait(lock, [] {
+                return !dataQueue.empty() || !isRunning;
+            });
 
             // Если сбор остановлен главным потоком и очередь пуста — завершаем работу
             if (!isRunning && dataQueue.empty()) {
@@ -45,11 +68,24 @@ void DataProcessingThread()
             dataQueue.pop();
         }
 
-        // Высокоскоростное сохранение "сырого" буфера double на диск
-        if (!localBuffer.empty()) 
+        // Сохранение данных с временными метками
+        if (!localBuffer.empty())
         {
-            std::streamsize bytesToWrite = localBuffer.size() * sizeof(double);
-            outFile.write(reinterpret_cast<const char*>(localBuffer.data()), bytesToWrite);
+            // Для каждой точки записываем пару (time, voltage)
+            std::vector<double> timedData;
+            timedData.reserve(localBuffer.size() * 2);
+
+            const double timeStep = 1.0 / samplingRate;
+            for (size_t i = 0; i < localBuffer.size(); ++i) {
+                double currentTime = (totalSamplesWritten + i) * timeStep;
+                timedData.push_back(currentTime);
+                timedData.push_back(localBuffer[i]);
+            }
+
+            std::streamsize bytesToWrite = timedData.size() * sizeof(double);
+            outFile.write(reinterpret_cast<const char*>(timedData.data()), bytesToWrite);
+
+            totalSamplesWritten += localBuffer.size();
 
             // Проверка на случай переполнения накопителя ПК
             if (!outFile) {
@@ -60,14 +96,14 @@ void DataProcessingThread()
 
     outFile.close();
 
-    std::printf("[Writer Thread] All data flushed to disk successfully. File closed.\n");
+    std::printf("[Writer Thread] All data flushed to disk successfully. Total samples: %llu. File closed.\n", totalSamplesWritten);
 }
 
 // --- 2. ФУНКЦИЯ ОБРАТНОГО ВЫЗОВА (Callback от драйвера) ---
 // Вызывается автоматически в изолированном высокоприоритетном потоке Advantech
 void BDAQCALL OnDataReadyEvent(void* sender, Automation::BDaq::BfdAiEventArgs* args, void* userParam)
 {
-    Automation::BDaq::BufferedAiCtrl* aiCtrl = (Automation::BDaq::BufferedAiCtrl*)sender;
+    Automation::BDaq::BufferedAiCtrl* aiCtrl = static_cast<Automation::BDaq::BufferedAiCtrl*>(sender);
 
     // Получаем точное количество отсчетов, готовых к считыванию из FIFO платы
     Automation::BDaq::int32 count = args->Count;
