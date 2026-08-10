@@ -1,12 +1,10 @@
 #include "main.hpp"
-#include <chrono>
-#include <cstdint>
 
 // --- НАСТРОЙКИ СБОРА ДАННЫХ ---
 // const wchar_t* deviceDescription = L"PCI-1716,BID#0";
 const wchar_t* deviceDescription = L"DemoDevice,BID#0";
 const Automation::BDaq::int32 startChannel = 0;
-const Automation::BDaq::int32 channelCount = 1;
+const Automation::BDaq::int32 channelCount = 16;
 const double samplingRate = 250000.0; // Максимальная частота 250 кГц
 const Automation::BDaq::int32 samplesPerChannel = 25000; // Забираем данные пачками по 25 000 точек (10 раз в сек)
 
@@ -33,8 +31,9 @@ void DataProcessingThread()
     // --- ЗАПИСЬ ЗАГОЛОВКА ФАЙЛА ---
     // Магическое число для идентификации формата
     const uint32_t magic = 0x50434931; // "PCI1"
-    const uint32_t version = 2; // Увеличиваем версию из-за добавления времени старта
+    const uint32_t version = 3; // Версия 3: добавлена поддержка нескольких каналов
     const double samplingRateLocal = samplingRate;
+    const uint32_t channelCountLocal = channelCount;
 
     // Получаем абсолютное время старта с высокой точностью
     const auto startTimePoint = std::chrono::system_clock::now();
@@ -44,6 +43,7 @@ void DataProcessingThread()
     outFile.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
     outFile.write(reinterpret_cast<const char*>(&version), sizeof(version));
     outFile.write(reinterpret_cast<const char*>(&samplingRateLocal), sizeof(samplingRateLocal));
+    outFile.write(reinterpret_cast<const char*>(&channelCountLocal), sizeof(channelCountLocal));
     outFile.write(reinterpret_cast<const char*>(&g_startTimeSeconds), sizeof(g_startTimeSeconds));
     // Запоминаем позицию для записи времени окончания
     std::streampos endTimePos = outFile.tellp();
@@ -56,10 +56,10 @@ void DataProcessingThread()
         return;
     }
 
-    std::printf("[Writer Thread] File header written successfully. Start time: %.6f s since epoch.\n", g_startTimeSeconds);
+    std::printf("[Writer Thread] File header written successfully. Channels: %u, Start time: %.6f s since epoch.\n", channelCountLocal, g_startTimeSeconds);
 
-    // Счетчик записанных точек для вычисления времени
-    uint64_t totalSamplesWritten = 0;
+    // Счетчик записанных кадров для вычисления времени
+    uint64_t totalFramesWritten = 0;
 
     while (true)
     {
@@ -84,22 +84,30 @@ void DataProcessingThread()
         // Сохранение данных с временными метками
         if (!localBuffer.empty())
         {
-            // Для каждой точки записываем пару (time, voltage)
-            std::vector<double> timedData;
-            timedData.reserve(localBuffer.size() * 2);
+            // localBuffer содержит данные в порядке: [ch0, ch1, ..., ch15, ch0, ch1, ...]
+            // Количество кадров = localBuffer.size() / channelCount
+            size_t framesInBuffer = localBuffer.size() / channelCount;
 
-            const double timeStep = 1.0 / samplingRate;
-            for (size_t i = 0; i < localBuffer.size(); ++i) {
+            std::vector<double> timedData;
+            // Каждый кадр: время + значения всех каналов
+            timedData.reserve(framesInBuffer * (1 + channelCount));
+
+            const double timeStep = 1.0 / samplingRate; // Шаг между кадрами (4 мкс при 250 кГц)
+            for (size_t frameIdx = 0; frameIdx < framesInBuffer; ++frameIdx) {
                 // Абсолютное время: время старта + смещение от начала сбора
-                double currentTime = g_startTimeSeconds + (totalSamplesWritten + i) * timeStep;
+                double currentTime = g_startTimeSeconds + (totalFramesWritten + frameIdx) * timeStep;
                 timedData.push_back(currentTime);
-                timedData.push_back(localBuffer[i]);
+
+                // Добавляем все каналы этого кадра
+                for (size_t ch = 0; ch < channelCount; ++ch) {
+                    timedData.push_back(localBuffer[frameIdx * channelCount + ch]);
+                }
             }
 
             std::streamsize bytesToWrite = timedData.size() * sizeof(double);
             outFile.write(reinterpret_cast<const char*>(timedData.data()), bytesToWrite);
 
-            totalSamplesWritten += localBuffer.size();
+            totalFramesWritten += framesInBuffer;
 
             // Проверка на случай переполнения накопителя ПК
             if (!outFile) {
@@ -118,10 +126,9 @@ void DataProcessingThread()
         std::printf("[Writer Thread] Warning: Failed to write end time to file header!\n");
     }
     outFile.seekp(0, std::ios::end);
-
     outFile.close();
 
-    std::printf("[Writer Thread] All data flushed to disk successfully. Total samples: %llu. File closed.\n", totalSamplesWritten);
+    std::printf("[Writer Thread] All data flushed to disk successfully. Total frames: %llu (channels: %u). File closed.\n", totalFramesWritten, channelCount);
     std::printf("[Writer Thread] End time: %.6f s since epoch.\n", endTimeSeconds);
 }
 
