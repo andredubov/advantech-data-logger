@@ -140,7 +140,17 @@ int main()
         for (std::size_t i = 0; i < toRead; ++i)
         {
             double currentTime = buffer[i * valuesPerFrame];
-            csvFile << currentTime;
+            
+            // Преобразование времени в формат DD.MM.YYYY HH:MM:SS,us
+            time_t rawTime = static_cast<time_t>(currentTime);
+            struct tm timeInfo;
+            ::localtime_s(&timeInfo, &rawTime);
+            int microseconds = static_cast<int>((currentTime - rawTime) * 1000000);
+            
+            char timeBuffer[64];
+            std::strftime(timeBuffer, sizeof(timeBuffer), "%d.%m.%Y %H:%M:%S", &timeInfo);
+            
+            csvFile << timeBuffer << "," << std::setw(6) << std::setfill('0') << microseconds << std::setfill(' ');
 
             for (std::size_t v = 1; v < valuesPerFrame; ++v) {
                 double value = buffer[i * valuesPerFrame + v];
