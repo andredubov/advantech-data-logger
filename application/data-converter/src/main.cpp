@@ -1,5 +1,4 @@
 #include "main.hpp"
-#include <cstdint>
 
 int main()
 {
@@ -10,18 +9,20 @@ int main()
     std::ifstream binFile(binaryFileName, std::ios::binary | std::ios::ate);
     if (!binFile.is_open()) {
         std::printf("Error: Failed to open binary file %s\n", binaryFileName.c_str());
+
         return EXIT_FAILURE;
     }
 
     std::streamsize fileSize = binFile.tellg();
     binFile.seekg(0, std::ios::beg);
 
-    // --- ЧТЕНИЕ ЗАГОЛОВКА ---
+    // --- ЧТЕНИЕ ЗАГОЛОВКА (только версия 3) ---
     uint32_t magic = 0;
     uint32_t version = 0;
     double samplingRate = 0.0;
-    uint32_t channelCount = 1; // По умолчанию 1 канал
+    uint32_t channelCount = 0;
     double startTimeSeconds = 0.0;
+    double endTimeSeconds = 0.0;
 
     binFile.read(reinterpret_cast<char*>(&magic), sizeof(magic));
     binFile.read(reinterpret_cast<char*>(&version), sizeof(version));
@@ -30,62 +31,75 @@ int main()
     if (!binFile) {
         std::printf("Error: Failed to read file header!\n");
         binFile.close();
+
         return EXIT_FAILURE;
     }
 
     if (magic != 0x50434931) {
         std::printf("Error: Invalid file format (magic number mismatch). Expected 0x%X, got 0x%X\n", 0x50434931, magic);
         binFile.close();
+
         return EXIT_FAILURE;
     }
 
-    double endTimeSeconds = 0.0;
-    if (version == 2) {
-        // Версия 2: время старта + время окончания
-        binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
-        binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
-        if (!binFile) {
-            std::printf("Error: Failed to read start/end time from header!\n");
-            binFile.close();
-            return EXIT_FAILURE;
-        }
-    } else if (version == 3) {
-        // Версия 3: channelCount + время старта + время окончания
-        binFile.read(reinterpret_cast<char*>(&channelCount), sizeof(channelCount));
-        binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
-        binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
-        if (!binFile) {
-            std::printf("Error: Failed to read channel count and start/end time from header!\n");
-            binFile.close();
-            return EXIT_FAILURE;
-        }
-    } else if (version != 1) {
-        std::printf("Error: Unsupported file version: %u\n", version);
+    // Поддерживается только версия 3
+    if (version != 3) {
+        std::printf("Error: Unsupported file version: %u. Only version 3 is supported.\n", version);
         binFile.close();
+
+        return EXIT_FAILURE;
+    }
+
+    // Версия 3: channelCount + время старта + время окончания
+    binFile.read(reinterpret_cast<char*>(&channelCount), sizeof(channelCount));
+    binFile.read(reinterpret_cast<char*>(&startTimeSeconds), sizeof(startTimeSeconds));
+    binFile.read(reinterpret_cast<char*>(&endTimeSeconds), sizeof(endTimeSeconds));
+    if (!binFile) {
+        std::printf("Error: Failed to read channel count and start/end time from header!\n");
+        binFile.close();
+
         return EXIT_FAILURE;
     }
 
     std::printf("File opened successfully.\n");
     std::printf("Format version: %u\n", version);
     std::printf("Sampling rate: %.0f Hz\n", samplingRate);
-    if (version >= 2) {
-        std::printf("Channel count: %u\n", channelCount);
-        std::printf("Start time (absolute): %.6f s since epoch\n", startTimeSeconds);
-    }
+    std::printf("Channel count: %u\n", channelCount);
+    
+    // Преобразование времени в формат DD.MM.YYYY HH:MM:SS,ms
+    auto formatTime = [](double seconds) -> std::string {
+        time_t rawTime = static_cast<time_t>(seconds);
+        struct tm timeInfo;
+        localtime_s(&timeInfo, &rawTime);
+        
+        int milliseconds = static_cast<int>((seconds - rawTime) * 1000);
+        
+        char buffer[64];
+        strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M:%S", &timeInfo);
+        
+        char result[80];
+        snprintf(result, sizeof(result), "%s,%03d", buffer, milliseconds);
+        
+        return std::string(result);
+    };
+    
+    std::printf("Start time: %s\n", formatTime(startTimeSeconds).c_str());
+    std::printf("End time:   %s\n", formatTime(endTimeSeconds).c_str());
 
-    // Определяем количество кадров
+    // Определяем количество кадров (версия 3: время + channelCount каналов)
     std::streamsize dataStartPos = binFile.tellg();
     std::streamsize dataSize = fileSize - dataStartPos;
-    std::size_t valuesPerFrame = (version >= 3) ? (1 + channelCount) : 2; // Версия 1-2: (time, voltage), Версия 3+: (time, ch0...chN)
+    std::size_t valuesPerFrame = 1 + channelCount; // (time, ch0...chN)
     std::size_t totalFrames = dataSize / (valuesPerFrame * sizeof(double));
 
     std::printf("Binary data size: %lld bytes.\n", dataSize);
     std::printf("Values per frame: %zu\n", valuesPerFrame);
     std::printf("Number of frames: %zu\n", totalFrames);
 
-    if (totalFrames == 0) {
+    if (0 == totalFrames) {
         std::printf("Warning: No data frames found in file.\n");
         binFile.close();
+
         return EXIT_SUCCESS;
     }
 
@@ -94,23 +108,19 @@ int main()
     if (!csvFile.is_open()) {
         std::printf("Error: Failed to create CSV file %s\n", csvFileName.c_str());
         binFile.close();
+
         return EXIT_FAILURE;
     }
 
     // Используем стандартную локаль "C" для предсказуемого формата чисел (точка как разделитель)
     csvFile.imbue(std::locale("C"));
-    if (version >= 3) {
-        // Многоканальный формат: время + каналы
-        csvFile << "Absolute Time(s)";
-        for (uint32_t ch = 0; ch < channelCount; ++ch) {
-            csvFile << ";Channel " << ch;
-        }
-        csvFile << "\n";
-    } else if (version == 2) {
-        csvFile << "Absolute Time(s);Voltage(V)\n";
-    } else {
-        csvFile << "Time(s);Voltage(V)\n";
+    
+    // Многоканальный формат: время + каналы (версия 3)
+    csvFile << "Absolute Time(s)";
+    for (uint32_t ch = 0; ch < channelCount; ++ch) {
+        csvFile << ";Channel " << ch;
     }
+    csvFile << "\n";
     csvFile << std::fixed << std::setprecision(6);
 
     std::printf("Conversion started, please wait...\n");
