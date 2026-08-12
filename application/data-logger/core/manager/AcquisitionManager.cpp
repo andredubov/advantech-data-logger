@@ -151,7 +151,10 @@ void AcquisitionManager::printConfiguration() const {
     std::printf("========================================================\n");
     std::printf("Data Logger Configuration:\n");
     std::printf("  Device:        %s\n", m_options->get_device_description().c_str());
-    std::printf("  Channels:      %d\n", m_options->get_channel_count());
+    std::printf("  Channels:      %d-%d (%d channels)\n",
+        m_options->get_start_channel(),
+        m_options->get_end_channel(),
+        m_options->get_channel_count());
     std::printf("  Sampling rate: %.0f Hz\n", m_options->get_sampling_rate());
     std::printf("  Buffer size:   %d samples per channel\n", m_options->get_samples_per_channel());
     std::printf("  Output file:   %s\n", m_options->get_output_file_path().c_str());
