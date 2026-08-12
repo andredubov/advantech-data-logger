@@ -30,11 +30,13 @@ namespace app
         virtual std::string get_version() const;
         virtual std::string get_error_message() const;
         virtual std::string get_device_description() const;
+        virtual int get_start_channel() const;
+        virtual int get_end_channel() const;
         virtual int get_channel_count() const;
         virtual double get_sampling_rate() const;
         virtual int get_samples_per_channel() const;
         virtual std::string get_output_file_path() const;
-        virtual bool is_use_demo_device() const;
+
 
     protected:
         virtual void setup();
@@ -48,10 +50,11 @@ namespace app
         std::string m_error_message;
         std::string m_device_description;
         std::string m_output_file_path;
-        long m_channel_count;
+        long m_start_channel;
+        long m_end_channel;
         double m_sampling_rate;
         long m_samples_per_channel;
-        bool m_use_demo_device;
+
     };
 }
 

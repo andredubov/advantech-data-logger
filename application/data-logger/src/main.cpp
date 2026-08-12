@@ -1,7 +1,6 @@
 #include "main.hpp"
 
 app::command_line_options command_line_options;
-
 std::queue<std::vector<double>> dataQueue;
 std::mutex queueMutex;
 std::condition_variable queueCV;
@@ -13,7 +12,7 @@ void DataProcessingThread()
 {
     // Создаем или перезаписываем бинарный файл в папке запуска приложения
     std::ofstream outFile(command_line_options.get_output_file_path(), std::ios::binary | std::ios::out);
-
+ 
     int channelCount = command_line_options.get_channel_count();
     double samplingRate = command_line_options.get_sampling_rate();
 
@@ -22,7 +21,9 @@ void DataProcessingThread()
         return;
     }
 
-    std::printf("[Writer Thread] Binary file daq_data_250khz.bin opened successfully.\n");
+    std::printf("[Writer Thread] Binary file %s opened successfully.\n", 
+        command_line_options.get_output_file_path().c_str()
+    );
 
     // --- ЗАПИСЬ ЗАГОЛОВКА ФАЙЛА ---
     // Магическое число для идентификации формата
@@ -82,20 +83,20 @@ void DataProcessingThread()
         {
             // localBuffer содержит данные в порядке: [ch0, ch1, ..., ch15, ch0, ch1, ...]
             // Количество кадров = localBuffer.size() / channelCount
-            size_t framesInBuffer = localBuffer.size() / channelCount;
+            std::size_t framesInBuffer = localBuffer.size() / channelCount;
 
             std::vector<double> timedData;
             // Каждый кадр: время + значения всех каналов
             timedData.reserve(framesInBuffer * (1 + channelCount));
 
             const double timeStep = 1.0 / samplingRate; // Шаг между кадрами (4 мкс при 250 кГц)
-            for (size_t frameIdx = 0; frameIdx < framesInBuffer; ++frameIdx) {
+            for (std::size_t frameIdx = 0; frameIdx < framesInBuffer; ++frameIdx) {
                 // Абсолютное время: время старта + смещение от начала сбора
                 double currentTime = g_startTimeSeconds + (totalFramesWritten + frameIdx) * timeStep;
                 timedData.push_back(currentTime);
 
                 // Добавляем все каналы этого кадра
-                for (size_t ch = 0; ch < channelCount; ++ch) {
+                for (std::size_t ch = 0; ch < channelCount; ++ch) {
                     timedData.push_back(localBuffer[frameIdx * channelCount + ch]);
                 }
             }
@@ -158,7 +159,7 @@ int main(int argc, char* argv[])
     auto state = command_line_options.parse(argc, argv);
 
     switch (state) {
-        case app::command_line_options::state::success:            
+        case app::command_line_options::state::success:
             break;
         case app::command_line_options::state::version:
             std::cout << "v" << command_line_options.get_version() << std::endl;
@@ -178,14 +179,14 @@ int main(int argc, char* argv[])
     std::printf("  Sampling rate: %.0f Hz\n", command_line_options.get_sampling_rate());
     std::printf("  Buffer size:   %d samples per channel\n", command_line_options.get_samples_per_channel());
     std::printf("  Output file:   %s\n", command_line_options.get_output_file_path().c_str());
-    std::printf("  Demo mode:     %s\n", command_line_options.is_use_demo_device() ? "ON" : "OFF");
     std::printf("========================================================\n\n");
 
-    // Создаем экземпляр контроллера буферизированного ввода
     Automation::BDaq::BufferedAiCtrl* aiCtrl = Automation::BDaq::BufferedAiCtrl::Create();
+    // Создаем экземпляр контроллера буферизированного ввода
+    std::string deviceDescription = command_line_options.get_device_description();
     std::wstring deviceDesc = std::wstring(
-        command_line_options.get_device_description().begin(), 
-        command_line_options.get_device_description().end()
+        deviceDescription.begin(), 
+        deviceDescription.end()
     );
     Automation::BDaq::DeviceInformation devInfo(deviceDesc.c_str());
 
@@ -199,14 +200,10 @@ int main(int argc, char* argv[])
     }
 
     // 2. Параметризация АЦП-сканирования (Настройки для 250 кГц)
-    aiCtrl->getScanChannel()->setChannelStart(0);
+    aiCtrl->getScanChannel()->setChannelStart(command_line_options.get_start_channel());
     aiCtrl->getScanChannel()->setChannelCount(command_line_options.get_channel_count());
     aiCtrl->getScanChannel()->setSamples(command_line_options.get_samples_per_channel());
     aiCtrl->getConvertClock()->setRate(command_line_options.get_sampling_rate());
-
-    // Задаем циклический буфер в ОЗУ ПК на 1 000 000 отсчетов для защиты от микрозависаний ОС.
-    // Драйвер Advantech автоматически настроит шину PCI на DMA-передачу в эту область.
-    // aiCtrl->getBuffer()->setLength(1000000);
 
     // 3. Подключаем функцию обработки прерываний буфера
     aiCtrl->addDataReadyHandler(OnDataReadyEvent, nullptr);
@@ -232,7 +229,10 @@ int main(int argc, char* argv[])
     }
 
     std::printf("\n========================================================\n");
-    std::printf("Data acquisition from PCI-1716 at 250 kHz STARTED.\n");
+    std::printf("Data acquisition from %s at %0.f Hz STARTED.\n", 
+        command_line_options.get_device_description().c_str(), 
+        command_line_options.get_sampling_rate()
+    );
     std::printf("Data is continuously written to binary file...\n");
     std::printf("Press ENTER to stop the program safely.\n");
     std::printf("========================================================\n\n");

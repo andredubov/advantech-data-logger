@@ -11,10 +11,10 @@ app::command_line_options::command_line_options() :
     m_error_message(),
     m_device_description(),
     m_output_file_path(),
-    m_channel_count(),
+    m_start_channel(0),
+    m_end_channel(15),
     m_sampling_rate(),
-    m_samples_per_channel(),
-    m_use_demo_device()
+    m_samples_per_channel()
 {
     setup();
 }
@@ -30,11 +30,11 @@ void app::command_line_options::setup()
 
     specific_options.add_options()
         ("device", po::value<std::string>(&m_device_description)->default_value("DemoDevice,BID#0"), "Device description (e.g., 'PCI-1716,BID#0' or 'DemoDevice,BID#0')")
-        ("channels", po::value<long>(&m_channel_count)->default_value(16), "Number of channels to acquire (1-16)")
+        ("start-channel", po::value<long>(&m_start_channel)->default_value(0), "Start channel (0-15)")
+        ("end-channel", po::value<long>(&m_end_channel)->default_value(15), "End channel (0-15)")
         ("rate", po::value<double>(&m_sampling_rate)->default_value(250000.0), "Sampling rate in Hz (max 250000)")
-        ("buffer", po::value<long>(&m_samples_per_channel)->default_value(25000), "Buffer size in samples per channel")
-        ("output", po::value<std::string>(&m_output_file_path)->default_value("daq_data.bin"), "Output binary file name")
-        ("demo", po::value<bool>(&m_use_demo_device)->default_value(true)->implicit_value(true), "Use demo device (if not specified, tries real hardware)");
+        ("samples-per-channel", po::value<long>(&m_samples_per_channel)->default_value(25000), "Number of samples per channel in the buffer")
+        ("output", po::value<std::string>(&m_output_file_path)->default_value("daq_data.bin"), "Output binary file name");
 
     m_options.add(general_options);
     m_options.add(specific_options);
@@ -65,10 +65,14 @@ app::command_line_options::state app::command_line_options::parse(int argc, char
             return state::version;
         }
 
-        if (variable_map.count("channels"))
+        if (variable_map.count("start-channel") || variable_map.count("end-channel"))
         {
-            if (m_channel_count < 1 || m_channel_count > 16) {
-                m_error_message = "Error: Channel count must be between 1 and 16.";
+            if (m_start_channel < 0 || m_start_channel > 15 || m_end_channel < 0 || m_end_channel > 15) {
+                m_error_message = "Error: Channels must be between 0 and 15.";
+                return state::failure;
+            }
+            if (m_start_channel > m_end_channel) {
+                m_error_message = "Error: Start channel must be less than or equal to end channel.";
                 return state::failure;
             }
         }
@@ -81,10 +85,10 @@ app::command_line_options::state app::command_line_options::parse(int argc, char
             }
         }
 
-        if (variable_map.count("buffer"))
+        if (variable_map.count("samples-per-channel"))
         {
             if (m_samples_per_channel <= 0) {
-                m_error_message ="Error: Buffer size must be positive.";
+                m_error_message ="Error: Samples per channel must be positive.";
                 return state::failure;
             }
         }
@@ -163,9 +167,19 @@ std::string app::command_line_options::get_output_file_path() const
     return m_output_file_path;
 }
 
+int app::command_line_options::get_start_channel() const
+{
+    return m_start_channel;
+}
+
+int app::command_line_options::get_end_channel() const
+{
+    return m_end_channel;
+}
+
 int app::command_line_options::get_channel_count() const
 {
-    return m_channel_count;
+    return m_end_channel - m_start_channel + 1;
 }
 
 double app::command_line_options::get_sampling_rate() const
@@ -178,7 +192,3 @@ int app::command_line_options::get_samples_per_channel() const
     return m_samples_per_channel;
 }
 
-bool app::command_line_options::is_use_demo_device() const
-{
-    return m_use_demo_device;
-}
