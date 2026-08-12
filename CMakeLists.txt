@@ -27,7 +27,6 @@ endif()
 # Добавление поддиректорий с приложениями
 add_subdirectory(application/data-logger)
 add_subdirectory(application/data-converter)
-
 add_subdirectory(library)
 
 # Связывание с библиотеками

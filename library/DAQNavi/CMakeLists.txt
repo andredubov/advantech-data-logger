@@ -8,7 +8,7 @@ if(DAQNavi_SOURCES)
     add_library(library_DAQNavi STATIC 
         ${DAQNavi_SOURCES} 
     )
-    target_include_directories(library_domain PUBLIC
+    target_include_directories(library_DAQNavi PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/inc
     )
 else()
