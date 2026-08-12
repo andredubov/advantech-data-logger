@@ -8,12 +8,23 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 
 add_executable(${PROJECT_NAME}
-    src/main.cpp
-    src/command_line_options.cpp
+    main/src/Main.cpp
+    main/src/CommandLineOptions.cpp
+    core/engine/DataProcessingEngine.cpp
+    core/manager/AcquisitionManager.cpp
+    devices/advantech/AdvantechDevice.cpp
+    storage/binary/BinaryFileWriter.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    inc
+    main/inc
+    core/engine
+    core/interfaces
+    core/manager
+    devices/advantech
+    devices/factory
+    logging/console
+    storage/binary
 )
 
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
