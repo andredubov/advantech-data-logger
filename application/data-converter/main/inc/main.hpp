@@ -4,3 +4,4 @@
 #include <iomanip>
 #include <cstdint>
 #include <algorithm>
+#include "CommandLineOptions.hpp"
