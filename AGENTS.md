@@ -42,13 +42,24 @@ cmake --build . --config Release
 - **Data format**: Binary file stores raw `double` samples (no headers)
 - **Converter**: Reads binary file, computes timestamps from sampling rate, outputs CSV with Russian locale (comma decimal separator)
 
-## Critical Configuration
+## Command-Line Arguments (data-logger)
 
-Edit in `application/data-logger/src/main.cpp`:
-```cpp
-const wchar_t* deviceDescription = L"PCI-1716,BID#0";  // Or L"DemoDevice,BID#0" for simulation
-const double samplingRate = 250000.0;                  // Max 250 kHz
-const int32 samplesPerChannel = 25000;                 // Buffer size
+All configuration is done via command-line arguments. Run `data-logger.exe --help` for details.
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--device` | Device description (e.g., `PCI-1716,BID#0` or `DemoDevice,BID#0`) | `DemoDevice,BID#0` |
+| `--start-channel` | First channel to acquire (0-15) | `0` |
+| `--end-channel` | Last channel to acquire (0-15) | `15` |
+| `--rate` | Sampling rate in Hz (max 250000) | `250000` |
+| `--samples-per-channel` | Buffer size in samples per channel | `25000` |
+| `--output` | Output binary file name | `daq_data.bin` |
+| `--help` | Show help | — |
+| `--version` | Show version | — |
+
+Example:
+```bash
+data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000
 ```
 
 ## Common Issues
