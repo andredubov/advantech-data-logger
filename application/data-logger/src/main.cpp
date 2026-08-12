@@ -53,7 +53,24 @@ void DataProcessingThread()
         return;
     }
 
-    std::printf("[Writer Thread] File header written successfully. Channels: %u, Start time: %.6f s since epoch.\n", channelCountLocal, g_startTimeSeconds);
+    // Преобразование времени в формат DD.MM.YYYY HH:MM:SS,us
+    auto formatTime = [](double seconds) -> std::string {
+        time_t rawTime = static_cast<time_t>(seconds);
+        struct tm timeInfo;
+        ::localtime_s(&timeInfo, &rawTime);
+        int microseconds = static_cast<int>((seconds - rawTime) * 1000000);
+        char buffer[64];
+        std::strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M:%S", &timeInfo);        
+        char result[80];
+        std::snprintf(result, sizeof(result), "%s,%06d", buffer, microseconds);
+
+        return std::string(result);
+    };
+
+    std::printf("[Writer Thread] File header written successfully. Channels: %u, Start time: %s\n", 
+        channelCountLocal, 
+        formatTime(g_startTimeSeconds).c_str()
+    );
 
     // Счетчик записанных кадров для вычисления времени
     uint64_t totalFramesWritten = 0;
@@ -125,8 +142,11 @@ void DataProcessingThread()
     outFile.seekp(0, std::ios::end);
     outFile.close();
 
-    std::printf("[Writer Thread] All data flushed to disk successfully. Total frames: %llu (channels: %u). File closed.\n", totalFramesWritten, channelCount);
-    std::printf("[Writer Thread] End time: %.6f s since epoch.\n", endTimeSeconds);
+    std::printf("[Writer Thread] All data flushed to disk successfully. Total frames: %llu (channels: %u). File closed.\n", 
+        totalFramesWritten, 
+        channelCount
+    );
+    std::printf("[Writer Thread] End time: %s\n", formatTime(endTimeSeconds).c_str());
 }
 
 // --- 2. ФУНКЦИЯ ОБРАТНОГО ВЫЗОВА (Callback от драйвера) ---
