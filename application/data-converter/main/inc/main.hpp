@@ -5,3 +5,6 @@
 #include <cstdint>
 #include <algorithm>
 #include "CommandLineOptions.hpp"
+#include "ConverterFactory.hpp"
+#include "Logger.hpp"
+#include "DataConverter.hpp"
