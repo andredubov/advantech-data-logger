@@ -10,3 +10,4 @@
 #include <chrono>
 #include "bdaqctrl.h"
 #include "compatibility.h"
+#include "command_line_options.hpp"

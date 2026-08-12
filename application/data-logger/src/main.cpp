@@ -1,14 +1,7 @@
 #include "main.hpp"
 
-// --- НАСТРОЙКИ СБОРА ДАННЫХ ---
-// const wchar_t* deviceDescription = L"PCI-1716,BID#0";
-const wchar_t* deviceDescription = L"DemoDevice,BID#0";
-const Automation::BDaq::int32 startChannel = 0;
-const Automation::BDaq::int32 channelCount = 16;
-const double samplingRate = 250000.0; // Максимальная частота 250 кГц
-const Automation::BDaq::int32 samplesPerChannel = 25000; // Забираем данные пачками по 25 000 точек (10 раз в сек)
+app::command_line_options command_line_options;
 
-// --- ПОТОКОБЕЗОПАСНАЯ ОЧЕРЕДЬ ---
 std::queue<std::vector<double>> dataQueue;
 std::mutex queueMutex;
 std::condition_variable queueCV;
@@ -19,7 +12,10 @@ double g_startTimeSeconds = 0.0; // Глобальное время старта
 void DataProcessingThread()
 {
     // Создаем или перезаписываем бинарный файл в папке запуска приложения
-    std::ofstream outFile("daq_data_250khz.bin", std::ios::binary | std::ios::out);
+    std::ofstream outFile(command_line_options.get_output_file_path(), std::ios::binary | std::ios::out);
+
+    int channelCount = command_line_options.get_channel_count();
+    double samplingRate = command_line_options.get_sampling_rate();
 
     if (!outFile.is_open()) {
         std::printf("[File Thread] Critical error: Failed to create file for writing!\n");
@@ -32,7 +28,7 @@ void DataProcessingThread()
     // Магическое число для идентификации формата
     const uint32_t magic = 0x50434931; // "PCI1"
     const uint32_t version = 3; // Версия 3: добавлена поддержка нескольких каналов
-    const double samplingRateLocal = samplingRate;
+    const double samplingRateLocal = command_line_options.get_sampling_rate();
     const uint32_t channelCountLocal = channelCount;
 
     // Получаем абсолютное время старта с высокой точностью
@@ -157,11 +153,41 @@ void BDAQCALL OnDataReadyEvent(void* sender, Automation::BDaq::BfdAiEventArgs* a
 }
 
 // --- 3. ГЛАВНЫЙ ПОТОК ПРИЛОЖЕНИЯ ---
-int main()
+int main(int argc, char* argv[])
 {
+    auto state = command_line_options.parse(argc, argv);
+
+    switch (state) {
+        case app::command_line_options::state::success:            
+            break;
+        case app::command_line_options::state::version:
+            std::cout << "v" << command_line_options.get_version() << std::endl;
+            return EXIT_SUCCESS;
+        case app::command_line_options::state::help:
+            std::cout << "Help: " << command_line_options.get_help() << std::endl;
+            return EXIT_SUCCESS;
+        default:
+            std::cout << command_line_options.get_error_message() << std::endl;
+            return EXIT_FAILURE;
+    }
+
+    std::printf("========================================================\n");
+    std::printf("Data Logger Configuration:\n");
+    std::printf("  Device:        %s\n", command_line_options.get_device_description().c_str());
+    std::printf("  Channels:      %d\n", command_line_options.get_channel_count());
+    std::printf("  Sampling rate: %.0f Hz\n", command_line_options.get_sampling_rate());
+    std::printf("  Buffer size:   %d samples per channel\n", command_line_options.get_samples_per_channel());
+    std::printf("  Output file:   %s\n", command_line_options.get_output_file_path().c_str());
+    std::printf("  Demo mode:     %s\n", command_line_options.is_use_demo_device() ? "ON" : "OFF");
+    std::printf("========================================================\n\n");
+
     // Создаем экземпляр контроллера буферизированного ввода
     Automation::BDaq::BufferedAiCtrl* aiCtrl = Automation::BDaq::BufferedAiCtrl::Create();
-    Automation::BDaq::DeviceInformation devInfo(deviceDescription);
+    std::wstring deviceDesc = std::wstring(
+        command_line_options.get_device_description().begin(), 
+        command_line_options.get_device_description().end()
+    );
+    Automation::BDaq::DeviceInformation devInfo(deviceDesc.c_str());
 
     // 1. Привязка к физическому слоту платы PCI-1716
     if (BioFailed(aiCtrl->setSelectedDevice(devInfo))) {
@@ -173,10 +199,10 @@ int main()
     }
 
     // 2. Параметризация АЦП-сканирования (Настройки для 250 кГц)
-    aiCtrl->getScanChannel()->setChannelStart(startChannel);
-    aiCtrl->getScanChannel()->setChannelCount(channelCount);
-    aiCtrl->getScanChannel()->setSamples(samplesPerChannel);
-    aiCtrl->getConvertClock()->setRate(samplingRate);
+    aiCtrl->getScanChannel()->setChannelStart(0);
+    aiCtrl->getScanChannel()->setChannelCount(command_line_options.get_channel_count());
+    aiCtrl->getScanChannel()->setSamples(command_line_options.get_samples_per_channel());
+    aiCtrl->getConvertClock()->setRate(command_line_options.get_sampling_rate());
 
     // Задаем циклический буфер в ОЗУ ПК на 1 000 000 отсчетов для защиты от микрозависаний ОС.
     // Драйвер Advantech автоматически настроит шину PCI на DMA-передачу в эту область.
