@@ -14,11 +14,19 @@ add_executable(${PROJECT_NAME}
     core/src/CsvWriter.cpp
     core/src/DataConverter.cpp
     core/src/TimeFormatter.cpp
+    validation/src/FileExtensionValidator.cpp
+    validation/src/FileValidator.cpp
+    utils/src/Logger.cpp
+    utils/src/ProgressReporter.cpp
+    factory/src/ConverterFactory.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     main/inc
     core/inc
+    validation/inc
+    utils/inc
+    factory/inc
 )
 
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
