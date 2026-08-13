@@ -3,6 +3,7 @@
 
 #include "IDataWriter.hpp"
 #include "ITimeFormatter.hpp"
+#include "ILogger.hpp"
 #include <fstream>
 #include <memory>
 
@@ -11,7 +12,7 @@ namespace core {
 
 class CsvWriter : public IDataWriter {
 public:
-    explicit CsvWriter(std::shared_ptr<ITimeFormatter> timeFormatter);
+    explicit CsvWriter(app::utils::ILogger &logger, std::shared_ptr<ITimeFormatter> timeFormatter);
     ~CsvWriter() override;
 
     // IDataWriter implementation
@@ -29,6 +30,7 @@ private:
     DataHeader m_header;
     bool m_headerWritten;
     size_t m_framesWritten;
+    app::utils::ILogger &m_logger;
 
     bool writeFrame(const DataFrame& frame);
 };

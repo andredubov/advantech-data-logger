@@ -5,13 +5,14 @@
 namespace app {
 namespace core {
 
-CsvWriter::CsvWriter(std::shared_ptr<ITimeFormatter> timeFormatter)
+CsvWriter::CsvWriter(app::utils::ILogger &logger, std::shared_ptr<ITimeFormatter> timeFormatter)
     : m_file()
     , m_filePath()
     , m_timeFormatter(timeFormatter)
     , m_header()
     , m_headerWritten(false)
     , m_framesWritten(0)
+    , m_logger(logger)
 {
 }
 
@@ -28,7 +29,7 @@ bool CsvWriter::open(const std::string& filePath)
     m_file.open(filePath);
     
     if (!m_file.is_open()) {
-        std::cerr << "Error: Failed to open CSV file: " << filePath << std::endl;
+        m_logger.error("Failed to open CSV file: %s", filePath.c_str());
         return false;
     }
     
@@ -42,7 +43,7 @@ bool CsvWriter::open(const std::string& filePath)
 bool CsvWriter::writeHeader(const DataHeader& header)
 {
     if (!m_file.is_open()) {
-        std::cerr << "Error: CSV file not open for writing header." << std::endl;
+        m_logger.error("CSV file not open for writing header.");
         return false;
     }
     
@@ -62,12 +63,12 @@ bool CsvWriter::writeHeader(const DataHeader& header)
 bool CsvWriter::writeFrames(const std::vector<DataFrame>& frames)
 {
     if (!m_headerWritten) {
-        std::cerr << "Error: Header must be written before frames." << std::endl;
+        m_logger.error("Header must be written before frames.");
         return false;
     }
     
     if (!m_file.is_open()) {
-        std::cerr << "Error: CSV file not open for writing frames." << std::endl;
+        m_logger.error("CSV file not open for writing frames.");
         return false;
     }
     

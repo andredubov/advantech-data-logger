@@ -36,7 +36,7 @@ public:
     virtual bool readHeader(DataHeader& header) = 0;
     
     // Прочитать кадры данных (по блокам)
-    virtual bool readFrames(std::vector<DataFrame>& frames, size_t maxFrames) = 0;
+    virtual bool readFrames(std::vector<DataFrame>& frames, std::size_t maxFrames) = 0;
     
     // Получить общее количество кадров
     virtual size_t getTotalFrames() const = 0;
