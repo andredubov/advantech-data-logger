@@ -61,6 +61,7 @@ private:
 
     bool m_initialized;
     bool m_acquisitionStarted;
+    bool m_shutdownCalled;
 
     void printConfiguration() const;
     void setupDeviceCallback();
