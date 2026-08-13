@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "ILogger.hpp"
+#include "ITimeFormatter.hpp"
 
 namespace app {
 namespace core {
@@ -17,12 +19,16 @@ namespace validation {
     class IValidator;
 }
 
+namespace utils {
+    class ILogger;
+}
+
 namespace factory {
 
 // Фабрика для создания компонентов конвертера
 class ConverterFactory {
 public:
-    ConverterFactory();
+    ConverterFactory(app::utils::ILogger& logger);
     ~ConverterFactory() = default;
 
     // Создать стандартный конвертер
@@ -35,7 +41,9 @@ public:
     );
 
     // Создать бинарный читатель
-    std::shared_ptr<core::IDataReader> createBinaryReader();
+    std::shared_ptr<core::IDataReader> createBinaryReader(
+        std::shared_ptr<core::ITimeFormatter> timeFormatter = nullptr
+    );
 
     // Создать CSV-записыватель с кастомным форматтером времени
     std::shared_ptr<core::IDataWriter> createCsvWriter(
@@ -56,6 +64,8 @@ public:
     bool validateOutputFile(const std::string& filePath, std::string& errorMessage);
 
 private:
+    app::utils::ILogger& m_logger;
+
     bool isFileExtensionValid(const std::string& filePath, const std::vector<std::string>& extensions);
 };
 

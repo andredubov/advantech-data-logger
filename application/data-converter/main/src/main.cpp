@@ -6,6 +6,8 @@ int main(int argc, char* argv[])
     auto& logger = app::utils::Logger::getInstance();
     logger.setLevel(app::utils::LogLevel::INFO);
 
+    auto &timeFormatter = app::core::TimeFormatter();
+
     // 2. Парсинг аргументов командной строки
     app::command_line_options options;
     auto state = options.parse(argc, argv);
@@ -20,7 +22,7 @@ int main(int argc, char* argv[])
             std::cout << options.get_help() << std::endl;
             return EXIT_SUCCESS;
         default:
-            std::cout << options.get_error_message() << std::endl;
+            logger.error(options.get_error_message());
             return EXIT_FAILURE;
     }
 
@@ -31,22 +33,16 @@ int main(int argc, char* argv[])
     logger.info("Output file: " + csvFileName);
 
     // 3. Создание фабрики и валидация файлов
-    app::factory::ConverterFactory factory;
+    app::factory::ConverterFactory factory(logger);
     std::string errorMessage;
 
-    if (!factory.validateInputFile(binaryFileName, errorMessage)) 
-    {
+    if (!factory.validateInputFile(binaryFileName, errorMessage)) {
         logger.error("Input validation failed: " + errorMessage);
-        std::cerr << "Error: " << errorMessage << std::endl;
-
         return EXIT_FAILURE;
     }
 
-    if (!factory.validateOutputFile(csvFileName, errorMessage)) 
-    {
+    if (!factory.validateOutputFile(csvFileName, errorMessage)) {
         logger.error("Output validation failed: " + errorMessage);
-        std::cerr << "Error: " << errorMessage << std::endl;
-
         return EXIT_FAILURE;
     }
 
@@ -58,15 +54,12 @@ int main(int argc, char* argv[])
     logger.info("Starting conversion...");
     bool success = converter->convert(binaryFileName, csvFileName);
 
-    if (!success) 
-    {
+    if (!success) {
         logger.error("Conversion failed!");
-        std::cerr << "Error: Conversion failed!" << std::endl;
         return EXIT_FAILURE;
     }
 
-    logger.info("Conversion completed successfully!");
-    std::cout << "\nConversion completed successfully! File saved as: " << csvFileName << std::endl;
-    
+    logger.info("Conversion completed successfully! File saved as: " + csvFileName);
+
     return EXIT_SUCCESS;
 }

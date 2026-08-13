@@ -6,10 +6,11 @@
 namespace app {
 namespace validation {
 
-FileExtensionValidator::FileExtensionValidator(const std::vector<std::string>& allowedExtensions)
+FileExtensionValidator::FileExtensionValidator(app::utils::ILogger &logger, const std::vector<std::string>& allowedExtensions)
     : m_allowedExtensions(allowedExtensions)
     , m_errorMessage()
     , m_caseSensitive(false)
+    , m_logger(logger)
 {
 }
 

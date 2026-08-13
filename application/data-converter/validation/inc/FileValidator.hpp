@@ -2,6 +2,7 @@
 #define FILE_VALIDATOR_HPP
 
 #include "IValidator.hpp"
+#include "ILogger.hpp"
 #include <memory>
 #include <vector>
 
@@ -11,7 +12,7 @@ namespace validation {
 // Композитный валидатор для файлов
 class FileValidator : public IValidator {
 public:
-    FileValidator();
+    FileValidator(app::utils::ILogger& logger);
     ~FileValidator() override = default;
 
     // Добавить валидатор в цепочку
@@ -24,6 +25,7 @@ public:
 private:
     std::vector<std::shared_ptr<IValidator>> m_validators;
     std::string m_errorMessage;
+    app::utils::ILogger& m_logger;
 };
 
 } // namespace validation
