@@ -1,18 +1,22 @@
 #include "BinaryReader.hpp"
+#include "Logger.hpp"
 #include <iostream>
 #include <algorithm>
 
 namespace app {
 namespace core {
 
-BinaryReader::BinaryReader()
+BinaryReader::BinaryReader(app::utils::ILogger &logger, std::shared_ptr<ITimeFormatter> timeFormatter)
     : m_file()
     , m_filePath()
     , m_header()
     , m_totalFrames(0)
+    , m_framesRead(0)
     , m_dataStartPos(0)
     , m_valuesPerFrame(0)
     , m_headerRead(false)
+    , m_logger(logger)
+    , m_timeFormatter(timeFormatter)
 {
 }
 
@@ -29,7 +33,7 @@ bool BinaryReader::open(const std::string& filePath)
     m_file.open(filePath, std::ios::binary | std::ios::ate);
     
     if (!m_file.is_open()) {
-        std::cerr << "Error: Failed to open binary file: " << filePath << std::endl;
+        m_logger.error("Failed to open binary file %s", filePath);
         return false;
     }
     
@@ -39,7 +43,7 @@ bool BinaryReader::open(const std::string& filePath)
 bool BinaryReader::readHeader(DataHeader& header)
 {
     if (!m_file.is_open()) {
-        std::cerr << "Error: File not open for reading header." << std::endl;
+        m_logger.error("File not open for reading header.");
         return false;
     }
     
@@ -53,15 +57,13 @@ bool BinaryReader::readHeader(DataHeader& header)
     
     // Проверяем магическое число
     if (header.magic != 0x50434931) {
-        std::cerr << "Error: Invalid file format (magic number mismatch). Expected 0x50434931, got 0x" 
-                  << std::hex << header.magic << std::dec << std::endl;
+        m_logger.error("Invalid file format (magic number mismatch). Expected 0x50434931, got 0x%X", header.magic);
         return false;
     }
     
     // Поддерживается только версия 3
     if (header.version != 3) {
-        std::cerr << "Error: Unsupported file version: " << header.version 
-                  << ". Only version 3 is supported." << std::endl;
+        m_logger.error("Unsupported file version: %u. Only version 3 is supported.", header.version);
         return false;
     }
     
@@ -81,19 +83,28 @@ bool BinaryReader::readFileHeader(DataHeader& header)
     m_file.read(reinterpret_cast<char*>(&header.magic), sizeof(header.magic));
     m_file.read(reinterpret_cast<char*>(&header.version), sizeof(header.version));
     m_file.read(reinterpret_cast<char*>(&header.samplingRate), sizeof(header.samplingRate));
-    
+
     if (!m_file) {
-        std::cerr << "Error: Failed to read file header!" << std::endl;
+        m_logger.error("Failed to read file header!");
         return false;
     }
-    
+
     // Версия 3: channelCount + время старта + время окончания
     m_file.read(reinterpret_cast<char*>(&header.channelCount), sizeof(header.channelCount));
     m_file.read(reinterpret_cast<char*>(&header.startTimeSeconds), sizeof(header.startTimeSeconds));
     m_file.read(reinterpret_cast<char*>(&header.endTimeSeconds), sizeof(header.endTimeSeconds));
+
+    m_logger.info("Header: magic=0x%X, version=%u, samplingRate=%.0f, channelCount=%u, startTime=%s, endTime=%s",
+        header.magic, 
+        header.version, 
+        header.samplingRate, 
+        header.channelCount, 
+        m_timeFormatter->formatTime(header.startTimeSeconds).c_str(), 
+        m_timeFormatter->formatTime(header.endTimeSeconds).c_str()
+    );
     
     if (!m_file) {
-        std::cerr << "Error: Failed to read channel count and start/end time from header!" << std::endl;
+        m_logger.error("Failed to read channel count and start/end time from header!");
         return false;
     }
     
@@ -113,14 +124,25 @@ bool BinaryReader::parseHeader(const DataHeader& header)
     std::streamsize dataSize = fileSize - m_dataStartPos;
     m_valuesPerFrame = 1 + header.channelCount; // (time, ch0...chN)
     m_totalFrames = dataSize / (m_valuesPerFrame * sizeof(double));
-    
+
+    m_logger.debug(
+        "parseHeader: fileSize=%lld, dataStartPos=%lld, dataSize=%lld, m_valuesPerFrame=%zu, m_totalFrames=%zu",
+        static_cast<long long>(fileSize),
+        static_cast<long long>(m_dataStartPos),
+        static_cast<long long>(dataSize),
+        m_valuesPerFrame,
+        m_totalFrames
+    );
+
     return true;
 }
 
-bool BinaryReader::readFrames(std::vector<DataFrame>& frames, size_t maxFrames)
+bool BinaryReader::readFrames(std::vector<DataFrame>& frames, std::size_t maxFrames)
 {
+    m_logger.debug("readFrames called: maxFrames=%zu, m_totalFrames=%zu", maxFrames, m_totalFrames);
+    
     if (!m_headerRead) {
-        std::cerr << "Error: Header not read before reading frames." << std::endl;
+        m_logger.error("Header not read before reading frames.");
         return false;
     }
     
@@ -129,7 +151,8 @@ bool BinaryReader::readFrames(std::vector<DataFrame>& frames, size_t maxFrames)
     }
     
     // Определяем размер буфера для чтения
-    size_t framesToRead = std::min(maxFrames, m_totalFrames - getTotalFrames());
+    std::size_t framesToRead = std::min(maxFrames, m_totalFrames - m_framesRead);
+    m_logger.info("framesToRead=%zu", framesToRead);
     if (framesToRead == 0) {
         return true;
     }
@@ -141,24 +164,31 @@ bool BinaryReader::readFrames(std::vector<DataFrame>& frames, size_t maxFrames)
     m_file.read(reinterpret_cast<char*>(buffer.data()), bytesToRead);
     
     if (!m_file) {
-        std::cerr << "Error: Failed to read frame data." << std::endl;
+        m_logger.error("Failed to read frame data.");
         return false;
     }
     
     // Заполняем кадры
-    for (size_t i = 0; i < framesToRead; ++i) {
+    for (std::size_t i = 0; i < framesToRead; ++i) {
         frames[i].time = buffer[i * m_valuesPerFrame];
         frames[i].channels.resize(m_header.channelCount);
         
-        for (size_t ch = 0; ch < m_header.channelCount; ++ch) {
+        for (std::size_t ch = 0; ch < m_header.channelCount; ++ch) {
             frames[i].channels[ch] = buffer[i * m_valuesPerFrame + 1 + ch];
         }
+    }
+    
+    m_framesRead += framesToRead;
+    
+    // Отладочный вывод первого кадра
+    if (framesToRead > 0) {
+        m_logger.debug("[BinaryReader] First frame time read: %.6f", frames[0].time);
     }
     
     return true;
 }
 
-size_t BinaryReader::getTotalFrames() const
+std::size_t BinaryReader::getTotalFrames() const
 {
     return m_totalFrames;
 }
