@@ -17,6 +17,7 @@ AcquisitionManager::AcquisitionManager(
     , m_options(options)
     , m_initialized(false)
     , m_acquisitionStarted(false)
+    , m_shutdownCalled(false)
 {}
 
 AcquisitionManager::~AcquisitionManager() {
@@ -123,6 +124,9 @@ void AcquisitionManager::stopAcquisition() {
 }
 
 void AcquisitionManager::shutdown() {
+    if (m_shutdownCalled) return;
+    m_shutdownCalled = true;
+
     if (m_acquisitionStarted) {
         stopAcquisition();
     }
