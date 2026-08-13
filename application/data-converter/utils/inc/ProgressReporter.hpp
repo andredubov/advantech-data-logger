@@ -4,34 +4,35 @@
 #include <string>
 #include <iostream>
 #include <mutex>
+#include "IProgressReporter.hpp"
 
 namespace app {
 namespace utils {
 
 // Класс для отображения прогресса выполнения
-class ProgressReporter {
+class ProgressReporter : public IProgressReporter {
 public:
     ProgressReporter();
     ~ProgressReporter() = default;
 
     // Начать новый прогресс
-    void start(size_t total, const std::string& message = "");
+    void start(size_t total, const std::string& message = "") override;
 
     // Обновить прогресс
-    void update(size_t current);
+    void update(size_t current) override;
 
     // Увеличить прогресс на шаг
-    void step(size_t increment = 1);
+    void step(size_t increment = 1) override;
 
     // Завершить прогресс
-    void finish(const std::string& message = "");
+    void finish(const std::string& message = "") override;
 
     // Получить текущий прогресс (0-100)
-    int getProgress() const;
+    int getProgress() const override;
 
     // Включить/отключить вывод в консоль
-    void setEnabled(bool enabled);
-    void setOutput(std::ostream& output);
+    void setEnabled(bool enabled) override;
+    void setOutput(std::ostream& output) override;
 
 private:
     void display();

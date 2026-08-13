@@ -2,6 +2,9 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <cstdarg>
+#include <vector>
+#include <cstdio>
 
 namespace app {
 namespace utils {
@@ -86,6 +89,29 @@ std::string Logger::levelToString(LogLevel level) const
         case LogLevel::ERROR:   return "ERROR";
         default:                return "UNKNOWN";
     }
+}
+
+void Logger::logFormatted(LogLevel level, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    
+    // Определяем необходимый размер буфера
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int size = std::vsnprintf(nullptr, 0, format, args_copy);
+    va_end(args_copy);
+    
+    if (size < 0) {
+        va_end(args);
+        return;
+    }
+    
+    std::vector<char> buffer(size + 1);
+    std::vsnprintf(buffer.data(), buffer.size(), format, args);
+    va_end(args);
+    
+    log(level, std::string(buffer.data()));
 }
 
 } // namespace utils
