@@ -6,8 +6,6 @@
 namespace app {
 namespace core {
 
-TimeFormatter::TimeFormatter() = default;
-
 std::string TimeFormatter::formatTime(double seconds) const
 {
     time_t rawTime = static_cast<time_t>(seconds);

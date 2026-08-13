@@ -8,8 +8,9 @@ namespace app {
 namespace core {
 
 class TimeFormatter : public ITimeFormatter {
+
 public:
-    TimeFormatter();
+    TimeFormatter() = default;
     ~TimeFormatter() override = default;
 
     // ITimeFormatter implementation
