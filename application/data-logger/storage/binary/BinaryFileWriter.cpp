@@ -37,8 +37,9 @@ void BinaryFileWriter::setMetadata(double samplingRate, int channelCount, double
     m_channelCount = channelCount;
     m_startTime = startTime;
     m_endTime = endTime;
-    
-    // Файл должен быть открыт до вызова этого метода (AcquisitionManager::initialize())
+        std::printf("[Writer Thread] setMetadata called: samplingRate=%.0f, channelCount=%d, startTime=%.6f\n",
+        samplingRate, channelCount, startTime);
+        // Файл должен быть открыт до вызова этого метода (AcquisitionManager::initialize())
     if (!m_file.is_open()) {
         std::printf("[Writer Thread] Critical error: File is not open! Cannot write header.\n");
         return;
@@ -92,6 +93,12 @@ void BinaryFileWriter::write(const std::vector<double>& data) {
         for (std::size_t ch = 0; ch < static_cast<std::size_t>(m_channelCount); ++ch) {
             timedData.push_back(data[frameIdx * m_channelCount + ch]);
         }
+    }
+
+    // Отладочный вывод для первого кадра
+    if (m_totalFramesWritten == 0) {
+        std::printf("[Writer Thread] First frame time: %.6f (startTime=%.6f, timeStep=%.6f)\n",
+            m_startTime + 0 * timeStep, m_startTime, timeStep);
     }
 
     std::streamsize bytesToWrite = timedData.size() * sizeof(double);
