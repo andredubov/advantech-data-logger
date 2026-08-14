@@ -1,5 +1,6 @@
 #include "ProgressReporter.hpp"
 #include <iomanip>
+#include <algorithm>
 
 namespace app {
 namespace utils {
