@@ -4,15 +4,18 @@
 
 namespace app {
 
-BinaryFileWriter::BinaryFileWriter()
+BinaryFileWriter::BinaryFileWriter(std::shared_ptr<app::ILogger> logger)
     : m_file()
     , m_filePath()
     , m_samplingRate(0.0)
+    , m_startChannel(0)
+    , m_endChannel(0)
     , m_channelCount(0)
     , m_startTime(0.0)
     , m_endTime(0.0)
     , m_totalFramesWritten(0)
     , m_endTimePos()
+    , m_logger(logger)
 {}
 
 BinaryFileWriter::~BinaryFileWriter() {
@@ -25,23 +28,37 @@ bool BinaryFileWriter::open(const std::string& filePath) {
     m_filePath = filePath;
     m_file.open(filePath, std::ios::binary | std::ios::out);
     if (!m_file.is_open()) {
-        std::printf("[Writer Thread] Critical error: Failed to create file for writing!\n");
+        if (m_logger) {
+            m_logger->error("[Writer Thread] Critical error: Failed to create file for writing!");
+        }
         return false;
     }
-    std::printf("[Writer Thread] Binary file %s opened successfully.\n", filePath.c_str());
+    if (m_logger) {
+        m_logger->info("[Writer Thread] Binary file %s opened successfully.", filePath.c_str());
+    }
     return true;
 }
 
-void BinaryFileWriter::setMetadata(double samplingRate, int channelCount, double startTime, double endTime) {
+void BinaryFileWriter::setMetadata(double samplingRate, int startChannel, int endChannel,  double startTime, double endTime) {
     m_samplingRate = samplingRate;
-    m_channelCount = channelCount;
+    m_startChannel = startChannel;
+    m_endChannel = endChannel;
+    m_channelCount = endChannel - startChannel + 1;
     m_startTime = startTime;
     m_endTime = endTime;
-        std::printf("[Writer Thread] setMetadata called: samplingRate=%.0f, channelCount=%d, startTime=%.6f\n",
-        samplingRate, channelCount, startTime);
-        // Файл должен быть открыт до вызова этого метода (AcquisitionManager::initialize())
+    m_logger->info(
+        "[Writer Thread] setMetadata called: samplingRate=%.0f, startChannel=%d, endChannel=%d, channelCount=%d, startTime=%.6f",
+        samplingRate, 
+        startChannel, 
+        endChannel, 
+        m_channelCount, 
+        startTime
+    );
+    // Файл должен быть открыт до вызова этого метода (AcquisitionManager::initialize())
     if (!m_file.is_open()) {
-        std::printf("[Writer Thread] Critical error: File is not open! Cannot write header.\n");
+        if (m_logger) {
+            m_logger->error("[Writer Thread] Critical error: File is not open! Cannot write header.");
+        }
         return;
     }
     
@@ -52,12 +69,16 @@ void BinaryFileWriter::writeHeader() {
     const uint32_t magic = 0x50434931; // "PCI1"
     const uint32_t version = 3; // Версия 3: добавлена поддержка нескольких каналов
     const double samplingRateLocal = m_samplingRate;
-    const uint32_t channelCountLocal = static_cast<uint32_t>(m_channelCount);
+    const uint32_t startChannelLocal = static_cast<uint32_t>(m_startChannel);
+    const uint32_t endChannelLocal = static_cast<uint32_t>(m_endChannel);
+    const uint32_t channelCountLocal = static_cast<uint32_t>(m_channelCount);    
     double endTimeSeconds = 0.0; // Временно
 
     m_file.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
     m_file.write(reinterpret_cast<const char*>(&version), sizeof(version));
     m_file.write(reinterpret_cast<const char*>(&samplingRateLocal), sizeof(samplingRateLocal));
+    m_file.write(reinterpret_cast<const char*>(&startChannelLocal), sizeof(startChannelLocal));
+    m_file.write(reinterpret_cast<const char*>(&endChannelLocal), sizeof(endChannelLocal));
     m_file.write(reinterpret_cast<const char*>(&channelCountLocal), sizeof(channelCountLocal));
     m_file.write(reinterpret_cast<const char*>(&m_startTime), sizeof(m_startTime));
 
@@ -66,12 +87,13 @@ void BinaryFileWriter::writeHeader() {
     m_file.write(reinterpret_cast<const char*>(&endTimeSeconds), sizeof(endTimeSeconds));
 
     if (!m_file) {
-        std::printf("[Writer Thread] Critical error: Failed to write file header!\n");
+        m_logger->error("[Writer Thread] Critical error: Failed to write file header!");
         m_file.close();
         return;
     }
 
-    std::printf("[Writer Thread] File header written successfully. Channels: %u, Start time: %s\n",
+    m_logger->info(
+        "[Writer Thread] File header written successfully. Channels: %u, Start time: %s",
         channelCountLocal,
         formatTime(m_startTime).c_str()
     );
@@ -96,9 +118,12 @@ void BinaryFileWriter::write(const std::vector<double>& data) {
     }
 
     // Отладочный вывод для первого кадра
-    if (m_totalFramesWritten == 0) {
-        std::printf("[Writer Thread] First frame time: %.6f (startTime=%.6f, timeStep=%.6f)\n",
-            m_startTime + 0 * timeStep, m_startTime, timeStep);
+    if (0 == m_totalFramesWritten) {
+        m_logger->debug("[Writer Thread] First frame time: %.6f (startTime=%.6f, timeStep=%.6f)",
+            m_startTime + 0 * timeStep, 
+            m_startTime, 
+            timeStep
+        );
     }
 
     std::streamsize bytesToWrite = timedData.size() * sizeof(double);
@@ -106,7 +131,7 @@ void BinaryFileWriter::write(const std::vector<double>& data) {
     m_totalFramesWritten += framesInBuffer;
 
     if (!m_file) {
-        std::printf("[Writer Thread] Critical error: Physical disk write failure!\n");
+        m_logger->error("[Writer Thread] Critical error: Physical disk write failure!");
     }
 }
 
@@ -122,16 +147,18 @@ void BinaryFileWriter::close() {
     m_file.seekp(m_endTimePos);
     m_file.write(reinterpret_cast<const char*>(&m_endTime), sizeof(m_endTime));
     if (!m_file) {
-        std::printf("[Writer Thread] Warning: Failed to write end time to file header!\n");
+        m_logger->warning("[Writer Thread] Warning: Failed to write end time to file header!");
     }
     m_file.seekp(0, std::ios::end);
     m_file.close();
 
-    std::printf("[Writer Thread] All data flushed to disk successfully. Total frames: %llu (channels: %d). File closed.\n",
+    m_logger->info(
+        "[Writer Thread] All data flushed to disk successfully. Total frames: %llu (channels: %d). File closed.",
         m_totalFramesWritten,
         m_channelCount
     );
-    std::printf("[Writer Thread] End time: %s\n", formatTime(m_endTime).c_str());
+    m_logger->info("[Writer Thread] End time: %s", formatTime(m_endTime).c_str());
+
 }
 
 void BinaryFileWriter::writeEndTime() {
