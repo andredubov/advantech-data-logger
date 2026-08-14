@@ -16,13 +16,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Boost
+    - name: Setup vcpkg
       run: |
-        choco install boost-msvc-14.3 --version=1.84.0 -y
-        echo "BOOST_ROOT=C:\ProgramData\chocolatey\lib\boost-msvc-14.3\lib\native\include" | Out-File -FilePath $env:GITHUB_ENV -Append
+        git clone https://github.com/Microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg integrate install
+        .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows
 
     - name: Configure CMake
-      run: cmake -B build -A x64 -DBOOST_ROOT=$env:BOOST_ROOT
+      run: cmake -B build -A x64 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
 
     - name: Build Release
       run: cmake --build build --config Release
@@ -44,13 +46,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Boost
+    - name: Setup vcpkg
       run: |
-        choco install boost-msvc-14.3 --version=1.84.0 -y
-        echo "BOOST_ROOT=C:\ProgramData\chocolatey\lib\boost-msvc-14.3\lib\native\include" | Out-File -FilePath $env:GITHUB_ENV -Append
+        git clone https://github.com/Microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg integrate install
+        .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows
 
     - name: Configure CMake
-      run: cmake -B build -A Win32 -DBOOST_ROOT=$env:BOOST_ROOT
+      run: cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
 
     - name: Build Release
       run: cmake --build build --config Release
