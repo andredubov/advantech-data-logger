@@ -24,7 +24,7 @@ jobs:
         .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows
 
     - name: Configure CMake
-      run: cmake -A x64 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601
+      run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
