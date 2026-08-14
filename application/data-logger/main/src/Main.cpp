@@ -1,4 +1,4 @@
-#include "Main.hpp"
+#include "main.hpp"
 
 /**
  * @brief Главная точка входа приложения с использованием SOLID-архитектуры
@@ -12,37 +12,31 @@
  */
 int main(int argc, char* argv[]) {
     // 1. Парсинг аргументов командной строки
-    app::command_line_options options;
-    auto state = options.parse(argc, argv);
+    auto options = std::make_shared<app::command_line_options>();
+    auto state = options->parse(argc, argv);
 
     switch (state) {
         case app::command_line_options::state::success:
             break;
         case app::command_line_options::state::version:
-            std::cout << "v" << options.get_version() << std::endl;
+            std::cout << "v" << options->get_version() << std::endl;
             return EXIT_SUCCESS;
         case app::command_line_options::state::help:
-            std::cout << "Help: " << options.get_help() << std::endl;
+            std::cout << "Help: " << options->get_help() << std::endl;
             return EXIT_SUCCESS;
         default:
-            std::cout << options.get_error_message() << std::endl;
+            std::cout << options->get_error_message() << std::endl;
             return EXIT_FAILURE;
     }
 
     // 2. Сборка зависимостей (Dependency Injection)
-    auto logger = std::make_unique<app::ConsoleLogger>();
-    auto writer = std::make_unique<app::BinaryFileWriter>();
-    auto device = std::make_unique<app::AdvantechDevice>();
-    auto engine = std::make_unique<app::DataProcessingEngine>(writer.get(), logger.get());
+    auto logger = std::make_shared<app::Logger>();
+    auto writer = std::make_shared<app::BinaryFileWriter>(logger);
+    auto device = std::make_shared<app::AdvantechDevice>(logger);
+    auto engine = std::make_shared<app::DataProcessingEngine>(writer, logger);
 
     // 3. Оркестрация процесса
-    app::AcquisitionManager manager(
-        device.get(),
-        engine.get(),
-        writer.get(),
-        logger.get(),
-        &options
-    );
+    app::AcquisitionManager manager(device, engine, writer, logger, options);
 
     // 4. Инициализация
     if (!manager.initialize()) {

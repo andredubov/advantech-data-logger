@@ -14,6 +14,7 @@ add_executable(${PROJECT_NAME}
     core/manager/AcquisitionManager.cpp
     devices/advantech/AdvantechDevice.cpp
     storage/binary/BinaryFileWriter.cpp
+    logging/src/Logger.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -23,7 +24,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     core/manager
     devices/advantech
     devices/factory
-    logging/console
+    logging/inc
     storage/binary
 )
 

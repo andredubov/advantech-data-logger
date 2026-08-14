@@ -6,4 +6,4 @@
 #include "AcquisitionManager.hpp"
 #include "AdvantechDevice.hpp"
 #include "BinaryFileWriter.hpp"
-#include "ConsoleLogger.hpp"
+#include "Logger.hpp"
