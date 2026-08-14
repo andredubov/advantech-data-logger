@@ -10,7 +10,7 @@
 namespace app {
 namespace factory {
 
-ConverterFactory::ConverterFactory(app::utils::ILogger& logger) 
+ConverterFactory::ConverterFactory(std::shared_ptr<app::utils::ILogger> logger) 
     : m_logger(logger)
 {
 

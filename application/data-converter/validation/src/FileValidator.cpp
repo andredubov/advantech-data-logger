@@ -3,7 +3,7 @@
 namespace app {
 namespace validation {
 
-FileValidator::FileValidator(app::utils::ILogger &logger)
+FileValidator::FileValidator(std::shared_ptr<app::utils::ILogger> logger)
     : m_validators()
     , m_errorMessage()
     , m_logger(logger)

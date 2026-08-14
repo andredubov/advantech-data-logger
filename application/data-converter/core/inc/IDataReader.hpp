@@ -13,6 +13,8 @@ struct DataHeader {
     uint32_t magic;
     uint32_t version;
     double samplingRate;
+    uint32_t startChannel;
+    uint32_t endChannel;
     uint32_t channelCount;
     double startTimeSeconds;
     double endTimeSeconds;

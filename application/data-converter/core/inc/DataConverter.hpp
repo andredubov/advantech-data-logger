@@ -15,7 +15,7 @@ namespace core {
 class DataConverter {
 public:
     DataConverter(
-        app::utils::ILogger &logger,
+        std::shared_ptr<app::utils::ILogger> logger,
         std::shared_ptr<IDataReader> reader,
         std::shared_ptr<IDataWriter> writer
     );
@@ -36,7 +36,7 @@ private:
     size_t m_chunkSize;
     int m_progress;
     bool m_useProgress;
-    app::utils::ILogger &m_logger;
+    std::shared_ptr<app::utils::ILogger> m_logger;
 
     bool processFrames(size_t totalFrames);
     void reportProgress(size_t processed, size_t total);

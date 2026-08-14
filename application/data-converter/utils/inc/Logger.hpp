@@ -15,6 +15,9 @@ namespace utils {
 // Простой потокобезопасный логгер
 class Logger : public ILogger {
 public:
+    Logger();
+    ~Logger() = default;
+    
     static Logger& getInstance();
 
     void setLevel(LogLevel level) override;
@@ -47,8 +50,6 @@ public:
     }
 
 private:
-    Logger();
-    ~Logger() = default;
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
 

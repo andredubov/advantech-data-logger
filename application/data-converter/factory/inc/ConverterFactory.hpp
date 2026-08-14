@@ -28,7 +28,7 @@ namespace factory {
 // Фабрика для создания компонентов конвертера
 class ConverterFactory {
 public:
-    ConverterFactory(app::utils::ILogger& logger);
+    ConverterFactory(std::shared_ptr<app::utils::ILogger> logger);
     ~ConverterFactory() = default;
 
     // Создать стандартный конвертер
@@ -64,7 +64,7 @@ public:
     bool validateOutputFile(const std::string& filePath, std::string& errorMessage);
 
 private:
-    app::utils::ILogger& m_logger;
+    std::shared_ptr<app::utils::ILogger> m_logger;
 
     bool isFileExtensionValid(const std::string& filePath, const std::vector<std::string>& extensions);
 };

@@ -6,7 +6,7 @@ namespace app {
 namespace core {
 
 DataConverter::DataConverter(
-    app::utils::ILogger &logger,
+    std::shared_ptr<app::utils::ILogger> logger,
     std::shared_ptr<IDataReader> reader,
     std::shared_ptr<IDataWriter> writer
 )
@@ -30,52 +30,52 @@ bool DataConverter::convert(const std::string& inputFile, const std::string& out
     
     // 1. Открываем входной файл
     if (!m_reader->open(inputFile)) {
-        m_logger.error("Failed to open input file: %s", inputFile.c_str());
+        m_logger->error("Failed to open input file: %s", inputFile.c_str());
         return false;
     }
     
     // 2. Читаем заголовок
     DataHeader header;
     if (!m_reader->readHeader(header)) {
-        m_logger.error("Failed to read header from input file.");
+        m_logger->error("Failed to read header from input file.");
         return false;
     }
     
     // 3. Открываем выходной файл
     if (!m_writer->open(outputFile)) {
-        m_logger.error("Failed to open output file: %s", outputFile.c_str());
+        m_logger->error("Failed to open output file: %s", outputFile.c_str());
         return false;
     }
     
     // 4. Записываем заголовок в выходной файл
     if (!m_writer->writeHeader(header)) {
-        m_logger.error("Failed to write header to output file.");
+        m_logger->error("Failed to write header to output file.");
         return false;
     }
     
     // 5. Обрабатываем кадры
     size_t totalFrames = m_reader->getTotalFrames();
     if (totalFrames == 0) {
-        m_logger.warning("No data frames found in file.");
+        m_logger->warning("No data frames found in file.");
         m_writer->finalize();
         return true;
     }
     
-    m_logger.info("Total frames: %zu", totalFrames);
-    m_logger.info("Conversion started, please wait...");
+    m_logger->info("Total frames: %zu", totalFrames);
+    m_logger->info("Conversion started, please wait...");
     
     if (!processFrames(totalFrames)) {
-        m_logger.error("Failed to process frames.");
+        m_logger->error("Failed to process frames.");
         return false;
     }
     
     // 6. Завершаем запись
     if (!m_writer->finalize()) {
-        m_logger.error("Failed to finalize output file.");
+        m_logger->error("Failed to finalize output file.");
         return false;
     }
     
-    m_logger.debug("Conversion completed successfully!");
+    m_logger->debug("Conversion completed successfully!");
     return true;
 }
 
@@ -113,8 +113,8 @@ void DataConverter::reportProgress(size_t processed, size_t total)
     int progress = static_cast<int>((static_cast<double>(processed) / total) * 100);
     if (progress != m_progress) {
         m_progress = progress;
-        m_logger.info("\r");
-        m_logger.info("Progress: %d%% (%zu/%zu)", progress, processed, total);
+        m_logger->info("\r");
+        m_logger->info("Progress: %d%% (%zu/%zu)", progress, processed, total);
     }
 }
 

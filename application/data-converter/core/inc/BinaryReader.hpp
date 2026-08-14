@@ -13,7 +13,7 @@ namespace core {
 
 class BinaryReader : public IDataReader {
 public:
-    BinaryReader(app::utils::ILogger &logger, std::shared_ptr<ITimeFormatter> timeFormatter);
+    BinaryReader(std::shared_ptr<app::utils::ILogger> logger, std::shared_ptr<ITimeFormatter> timeFormatter);
     ~BinaryReader() override;
 
     // IDataReader implementation
@@ -33,7 +33,7 @@ private:
     std::streamsize m_dataStartPos;
     std::size_t m_valuesPerFrame;
     bool m_headerRead;
-    app::utils::ILogger &m_logger;
+    std::shared_ptr<app::utils::ILogger> m_logger;
     std::shared_ptr<ITimeFormatter> m_timeFormatter;
 
     bool readFileHeader(DataHeader& header);

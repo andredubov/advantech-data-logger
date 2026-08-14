@@ -3,10 +3,8 @@
 int main(int argc, char* argv[])
 {
     // 1. Настройка логгера
-    auto& logger = app::utils::Logger::getInstance();
-    logger.setLevel(app::utils::LogLevel::INFO);
-
-    auto &timeFormatter = app::core::TimeFormatter();
+    auto logger = std::make_shared<app::utils::Logger>();
+    logger->setLevel(app::utils::LogLevel::INFO);
 
     // 2. Парсинг аргументов командной строки
     app::command_line_options options;
@@ -22,27 +20,27 @@ int main(int argc, char* argv[])
             std::cout << options.get_help() << std::endl;
             return EXIT_SUCCESS;
         default:
-            logger.error(options.get_error_message());
+            logger->error(options.get_error_message());
             return EXIT_FAILURE;
     }
 
     const std::string binaryFileName = options.get_input_file_path();
     const std::string csvFileName = options.get_output_file_path();
 
-    logger.info("Input file: " + binaryFileName);
-    logger.info("Output file: " + csvFileName);
+    logger->info("Input file: " + binaryFileName);
+    logger->info("Output file: " + csvFileName);
 
     // 3. Создание фабрики и валидация файлов
     app::factory::ConverterFactory factory(logger);
     std::string errorMessage;
 
     if (!factory.validateInputFile(binaryFileName, errorMessage)) {
-        logger.error("Input validation failed: " + errorMessage);
+        logger->error("Input validation failed: " + errorMessage);
         return EXIT_FAILURE;
     }
 
     if (!factory.validateOutputFile(csvFileName, errorMessage)) {
-        logger.error("Output validation failed: " + errorMessage);
+        logger->error("Output validation failed: " + errorMessage);
         return EXIT_FAILURE;
     }
 
@@ -51,15 +49,15 @@ int main(int argc, char* argv[])
     converter->setChunkSize(25000);
 
     // 5. Выполнение конвертации
-    logger.info("Starting conversion...");
+    logger->info("Starting conversion...");
     bool success = converter->convert(binaryFileName, csvFileName);
 
     if (!success) {
-        logger.error("Conversion failed!");
+        logger->error("Conversion failed!");
         return EXIT_FAILURE;
     }
 
-    logger.info("Conversion completed successfully! File saved as: " + csvFileName);
+    logger->info("Conversion completed successfully! File saved as: " + csvFileName);
 
     return EXIT_SUCCESS;
 }

@@ -5,7 +5,7 @@
 namespace app {
 namespace core {
 
-CsvWriter::CsvWriter(app::utils::ILogger &logger, std::shared_ptr<ITimeFormatter> timeFormatter)
+CsvWriter::CsvWriter(std::shared_ptr<app::utils::ILogger> logger, std::shared_ptr<ITimeFormatter> timeFormatter)
     : m_file()
     , m_filePath()
     , m_timeFormatter(timeFormatter)
@@ -29,7 +29,7 @@ bool CsvWriter::open(const std::string& filePath)
     m_file.open(filePath);
     
     if (!m_file.is_open()) {
-        m_logger.error("Failed to open CSV file: %s", filePath.c_str());
+        m_logger->error("Failed to open CSV file: %s", filePath.c_str());
         return false;
     }
     
@@ -43,7 +43,7 @@ bool CsvWriter::open(const std::string& filePath)
 bool CsvWriter::writeHeader(const DataHeader& header)
 {
     if (!m_file.is_open()) {
-        m_logger.error("CSV file not open for writing header.");
+        m_logger->error("CSV file not open for writing header.");
         return false;
     }
     
@@ -51,7 +51,7 @@ bool CsvWriter::writeHeader(const DataHeader& header)
     
     // Записываем заголовок CSV
     m_file << "Absolute Time(s)";
-    for (uint32_t ch = 0; ch < header.channelCount; ++ch) {
+    for (uint32_t ch = header.startChannel; ch <= header.endChannel; ++ch) {
         m_file << ";Channel " << ch;
     }
     m_file << "\n";
@@ -63,12 +63,12 @@ bool CsvWriter::writeHeader(const DataHeader& header)
 bool CsvWriter::writeFrames(const std::vector<DataFrame>& frames)
 {
     if (!m_headerWritten) {
-        m_logger.error("Header must be written before frames.");
+        m_logger->error("Header must be written before frames.");
         return false;
     }
     
     if (!m_file.is_open()) {
-        m_logger.error("CSV file not open for writing frames.");
+        m_logger->error("CSV file not open for writing frames.");
         return false;
     }
     
