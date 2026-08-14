@@ -5,11 +5,11 @@
 namespace app {
 
 AcquisitionManager::AcquisitionManager(
-    IDataAcquisitionDevice* device,
-    DataProcessingEngine* engine,
-    IDataWriter* writer,
-    ILogger* logger,
-    const command_line_options* options)
+    std::shared_ptr<app::IDataAcquisitionDevice> device,
+    std::shared_ptr<app::DataProcessingEngine> engine,
+    std::shared_ptr<app::IDataWriter> writer,
+    std::shared_ptr<app::ILogger> logger,
+    std::shared_ptr<app::command_line_options> options)
     : m_device(device)
     , m_engine(engine)
     , m_writer(writer)
@@ -18,7 +18,9 @@ AcquisitionManager::AcquisitionManager(
     , m_initialized(false)
     , m_acquisitionStarted(false)
     , m_shutdownCalled(false)
-{}
+{
+
+}
 
 AcquisitionManager::~AcquisitionManager() {
     shutdown();
@@ -71,14 +73,15 @@ bool AcquisitionManager::startAcquisition() {
     }
 
     // Подготовка движка
-    int channelCount = m_options->get_channel_count();
+    int startChannel = m_options->get_start_channel();
+    int endChannel = m_options->get_end_channel();
     double samplingRate = m_options->get_sampling_rate();
 
     // Настройка callback для устройства
     setupDeviceCallback();
 
     // Запуск движка обработки
-    m_engine->start(samplingRate, channelCount);
+    m_engine->start(samplingRate, startChannel, endChannel);
 
     // Старт сбора данных
     if (!m_device->start()) {
@@ -89,14 +92,12 @@ bool AcquisitionManager::startAcquisition() {
 
     m_acquisitionStarted = true;
 
-    std::printf("\n========================================================\n");
-    std::printf("Data acquisition from %s at %.0f Hz STARTED.\n",
+    m_logger->info("Data acquisition from %s at %.0f Hz STARTED.",
         m_options->get_device_description().c_str(),
         m_options->get_sampling_rate()
     );
-    std::printf("Data is continuously written to binary file...\n");
-    std::printf("Press ENTER to stop the program safely.\n");
-    std::printf("========================================================\n\n");
+    m_logger->info("Data is continuously written to binary file...");
+    m_logger->info("Press ENTER to stop the program safely.");
 
     return true;
 }
@@ -112,7 +113,7 @@ void AcquisitionManager::stopAcquisition() {
         return;
     }
 
-    std::printf("Stopping data acquisition on device...\n");
+    m_logger->info("Stopping data acquisition on device...");
 
     // Остановка устройства
     m_device->stop();
@@ -137,11 +138,13 @@ void AcquisitionManager::shutdown() {
     }
 
     m_initialized = false;
-    std::printf("Program finished successfully. All resources released.\n");
+    m_logger->info("Program finished successfully. All resources released.");
 }
 
 void AcquisitionManager::setupDeviceCallback() {
-    if (!m_device) return;
+    if (!m_device) {
+        return;
+    }
 
     // Связываем callback устройства с движком
     m_device->setDataReadyCallback([this](const std::vector<double>& data) {
@@ -152,17 +155,16 @@ void AcquisitionManager::setupDeviceCallback() {
 }
 
 void AcquisitionManager::printConfiguration() const {
-    std::printf("========================================================\n");
-    std::printf("Data Logger Configuration:\n");
-    std::printf("  Device:        %s\n", m_options->get_device_description().c_str());
-    std::printf("  Channels:      %d-%d (%d channels)\n",
+    m_logger->info("Data Logger Configuration:");
+    m_logger->info("  Device:        %s", m_options->get_device_description().c_str());
+    m_logger->info("  Channels:      %d-%d (%d channels)", 
         m_options->get_start_channel(),
         m_options->get_end_channel(),
-        m_options->get_channel_count());
-    std::printf("  Sampling rate: %.0f Hz\n", m_options->get_sampling_rate());
-    std::printf("  Buffer size:   %d samples per channel\n", m_options->get_samples_per_channel());
-    std::printf("  Output file:   %s\n", m_options->get_output_file_path().c_str());
-    std::printf("========================================================\n\n");
+        m_options->get_channel_count()
+    );
+    m_logger->info("  Sampling rate: %.0f Hz", m_options->get_sampling_rate());
+    m_logger->info("  Buffer size:   %d samples per channel", m_options->get_samples_per_channel());
+    m_logger->info("  Output file:   %s", m_options->get_output_file_path().c_str());
 }
 
 } // namespace app

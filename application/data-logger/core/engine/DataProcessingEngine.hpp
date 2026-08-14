@@ -10,6 +10,7 @@
 #include <atomic>
 #include <vector>
 #include <cstdint>
+#include <memory>
 
 namespace app {
 
@@ -18,7 +19,7 @@ namespace app {
  */
 class DataProcessingEngine {
 public:
-    DataProcessingEngine(IDataWriter* writer, ILogger* logger);
+    DataProcessingEngine(std::shared_ptr<app::IDataWriter> writer, std::shared_ptr<app::ILogger> logger);
     ~DataProcessingEngine();
 
     /**
@@ -26,7 +27,7 @@ public:
      * @param samplingRate Sampling rate in Hz for time calculations
      * @param channelCount Number of channels
      */
-    void start(double samplingRate, int channelCount);
+    void start(double samplingRate, int startChannel, int endChannel);
 
     /**
      * @brief Stop the processing engine and wait for all data to be written
@@ -50,8 +51,8 @@ public:
     uint64_t getTotalFramesWritten() const;
 
 private:
-    IDataWriter* m_writer;
-    ILogger* m_logger;
+    std::shared_ptr<app::IDataWriter> m_writer;
+    std::shared_ptr<app::ILogger> m_logger;
 
     std::queue<std::vector<double>> m_dataQueue;
     std::mutex m_queueMutex;
@@ -60,6 +61,8 @@ private:
     std::thread m_writerThread;
 
     double m_samplingRate;
+    int m_startChannel;
+    int m_endChannel;
     int m_channelCount;
     double m_startTime;
 

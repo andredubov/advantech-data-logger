@@ -17,13 +17,13 @@ namespace app {
 class AcquisitionManager {
 public:
     AcquisitionManager(
-        IDataAcquisitionDevice* device,
-        DataProcessingEngine* engine,
-        IDataWriter* writer,
-        ILogger* logger,
-        const command_line_options* options
+        std::shared_ptr<app::IDataAcquisitionDevice> device,
+        std::shared_ptr<app::DataProcessingEngine> engine,
+        std::shared_ptr<app::IDataWriter> writer,
+        std::shared_ptr<app::ILogger> logger,
+        std::shared_ptr<app::command_line_options> options
     );
-    ~AcquisitionManager();
+    virtual ~AcquisitionManager();
 
     /**
      * @brief Initialize the device and writer
@@ -53,11 +53,11 @@ public:
     void shutdown();
 
 private:
-    IDataAcquisitionDevice* m_device;
-    DataProcessingEngine* m_engine;
-    IDataWriter* m_writer;
-    ILogger* m_logger;
-    const command_line_options* m_options;
+    std::shared_ptr<app::IDataAcquisitionDevice> m_device;
+    std::shared_ptr<app::DataProcessingEngine> m_engine;
+    std::shared_ptr<app::IDataWriter> m_writer;
+    std::shared_ptr<app::ILogger> m_logger;
+    std::shared_ptr<app::command_line_options> m_options;
 
     bool m_initialized;
     bool m_acquisitionStarted;

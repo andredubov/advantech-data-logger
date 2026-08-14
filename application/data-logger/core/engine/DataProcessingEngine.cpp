@@ -3,11 +3,13 @@
 
 namespace app {
 
-DataProcessingEngine::DataProcessingEngine(IDataWriter* writer, ILogger* logger)
+DataProcessingEngine::DataProcessingEngine(std::shared_ptr<app::IDataWriter> writer, std::shared_ptr<app::ILogger> logger)
     : m_writer(writer)
     , m_logger(logger)
     , m_isRunning(false)
     , m_samplingRate(0.0)
+    , m_startChannel(0)
+    , m_endChannel(0)
     , m_channelCount(0)
     , m_startTime(0.0)
 {}
@@ -18,16 +20,18 @@ DataProcessingEngine::~DataProcessingEngine() {
     }
 }
 
-void DataProcessingEngine::start(double samplingRate, int channelCount) {
+void DataProcessingEngine::start(double samplingRate, int startChannel, int endChannel) {
     m_samplingRate = samplingRate;
-    m_channelCount = channelCount;
+    m_startChannel = startChannel;
+    m_endChannel = endChannel;
+    m_channelCount = endChannel - startChannel + 1;
     m_isRunning = true;
 
     const auto startTimePoint = std::chrono::system_clock::now();
     m_startTime = std::chrono::duration<double>(startTimePoint.time_since_epoch()).count();
 
     // Передаём метаданные в writer
-    m_writer->setMetadata(m_samplingRate, m_channelCount, m_startTime, 0.0);
+    m_writer->setMetadata(m_samplingRate, m_startChannel, m_endChannel, m_startTime, 0.0);
 
     // Запускаем поток записи
     m_writerThread = std::thread(&DataProcessingEngine::writerThreadFunction, this);
