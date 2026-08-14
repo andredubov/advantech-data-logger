@@ -2,6 +2,7 @@
 #define ADVANTECHDEVICE_HPP
 
 #include "IDataAcquisitionDevice.hpp"
+#include "ILogger.hpp"
 #include "bdaqctrl.h"
 #include "compatibility.h"
 #include <string>
@@ -11,6 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <functional>
+#include <memory>
 
 namespace app {
 
@@ -19,7 +21,7 @@ namespace app {
  */
 class AdvantechDevice : public IDataAcquisitionDevice {
 public:
-    AdvantechDevice();
+    AdvantechDevice(std::shared_ptr<app::ILogger> logger);
     ~AdvantechDevice() override;
 
     bool initialize(const std::string& deviceDescription) override;
@@ -39,6 +41,7 @@ private:
     int m_channelCount;
     int m_samplesPerChannel;
     double m_samplingRate;
+    std::shared_ptr<app::ILogger> m_logger;
 
     static void BDAQCALL OnDataReadyEvent(void* sender, Automation::BDaq::BfdAiEventArgs* args, void* userParam);
     void handleDataReady(Automation::BDaq::BufferedAiCtrl* aiCtrl, Automation::BDaq::int32 count);

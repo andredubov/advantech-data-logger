@@ -3,7 +3,7 @@
 
 namespace app {
 
-AdvantechDevice::AdvantechDevice()
+AdvantechDevice::AdvantechDevice(std::shared_ptr<app::ILogger> logger)
     : m_aiCtrl(nullptr)
     , m_callback(nullptr)
     , m_isRunning(false)
@@ -12,6 +12,7 @@ AdvantechDevice::AdvantechDevice()
     , m_channelCount(1)
     , m_samplesPerChannel(25000)
     , m_samplingRate(250000.0)
+    , m_logger(logger)
 {
     m_aiCtrl = Automation::BDaq::BufferedAiCtrl::Create();
 }
@@ -29,8 +30,8 @@ bool AdvantechDevice::initialize(const std::string& deviceDescription) {
     Automation::BDaq::DeviceInformation devInfo(deviceDesc.c_str());
 
     if (BioFailed(m_aiCtrl->setSelectedDevice(devInfo))) {
-        std::printf("Initialization error: Device not found in system!\n");
-        std::printf("Check device name and BoardID in Advantech Navigator utility.\n");
+        m_logger->error("Initialization error: Device not found in system!");
+        m_logger->error("Check device name and BoardID in Advantech Navigator utility.");
         return false;
     }
     return true;
@@ -51,7 +52,7 @@ bool AdvantechDevice::configure(int startChannel, int channelCount, int samplesP
 
 bool AdvantechDevice::start() {
     if (!m_aiCtrl) {
-        std::printf("Error: Device not initialized.\n");
+        m_logger->error("Error: Device not initialized.");
         return false;
     }
 
@@ -64,7 +65,7 @@ bool AdvantechDevice::start() {
     }
 
     if (BioFailed(ret)) {
-        std::printf("Critical error: Failed to start ADC. Error code: %d\n", ret);
+        m_logger->error("Critical error: Failed to start ADC. Error code: %d", ret);
         m_isRunning = false;
         return false;
     }
