@@ -40,7 +40,7 @@ public:
     /**
      * @brief Set metadata for the file (sampling rate, channel count, timestamps)
      */
-    virtual void setMetadata(double samplingRate, int channelCount, double startTime, double endTime) = 0;
+    virtual void setMetadata(double samplingRate, int startChannel, int stopChannel, double startTime, double endTime) = 0;
 
     /**
      * @brief Get the total number of frames written
