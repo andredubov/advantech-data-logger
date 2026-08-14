@@ -24,13 +24,13 @@ jobs:
         .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows
 
     - name: Configure CMake
-      run: cmake -B build -A x64 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+      run: cmake -B build -A x64 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
 
     - name: Build Release
       run: cmake --build build --config Release
 
     - name: Upload artifacts (x64)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pci-1716-binaries-x64
         path: |
@@ -44,7 +44,7 @@ jobs:
         arch: [Win32]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Setup vcpkg
       run: |
@@ -54,13 +54,13 @@ jobs:
         .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows
 
     - name: Configure CMake
-      run: cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+      run: cmake -B build -A Win32 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
 
     - name: Build Release
       run: cmake --build build --config Release
 
     - name: Upload artifacts (x86)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pci-1716-binaries-x86
         path: |
@@ -76,19 +76,19 @@ jobs:
     
     steps:
     - name: Download artifacts (x64)
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: pci-1716-binaries-x64
         path: binaries/x64
 
     - name: Download artifacts (x86)
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: pci-1716-binaries-x86
         path: binaries/x86
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         files: |
           binaries/x64/*.exe
