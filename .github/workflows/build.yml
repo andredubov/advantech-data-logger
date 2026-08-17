@@ -16,6 +16,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
+    - name: Setup vcpkg cache
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ~/.cache/vcpkg
+          ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
     - name: Install Boost via vcpkg
       run: |
         vcpkg install boost:x64-windows-static
@@ -48,20 +58,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Install Boost
-      id: install-boost
-      uses: MarkusJx/install-boost@v2.6.0      
+    - name: Setup vcpkg cache
+      uses: actions/cache@v6.1.0
       with:
-        boost_version: 1.87.0
-        platform_version: 2022
-        toolset: msvc
-        link: static
-        arch: x86
+        path: |
+          ~/.cache/vcpkg
+          ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Configure CMake
-      run: cmake -A Win32 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601 -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib
-      env:
-        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+      run: >
+        cmake -A Win32 -S . -B ./build 
+        -DCMAKE_GENERATOR_TOOLSET=v143 
+        -D_WIN32_WINNT=0x0601 
+        -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_TARGET_TRIPLET=x86-windows-static
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
