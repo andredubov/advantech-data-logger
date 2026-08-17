@@ -16,19 +16,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    # - name: Setup vcpkg cache
-    #   uses: actions/cache@v6.1.0
-    #   with:
-    #     path: |
-    #       ~/.cache/vcpkg
-    #       ${{ github.workspace }}/vcpkg_installed
-    #     key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
-    #     restore-keys: |
-    #       ${{ runner.os }}-vcpkg-
+    - name: Setup vcpkg cache
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ~/.cache/vcpkg
+          ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install Boost via vcpkg
       run: |
-        vcpkg install boost-system@1.88.0 boost-program-options@1.88.0 boost-filesystem@1.88.0 --triplet x64-windows-static
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows-static
   
     - name: Configure CMake
       run: >
@@ -58,19 +58,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    # - name: Setup vcpkg cache
-    #   uses: actions/cache@v6.1.0
-    #   with:
-    #     path: |
-    #       ~/.cache/vcpkg
-    #       ${{ github.workspace }}/vcpkg_installed
-    #     key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
-    #     restore-keys: |
-    #       ${{ runner.os }}-vcpkg-
+    - name: Setup vcpkg cache
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ~/.cache/vcpkg
+          ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install Boost via vcpkg
       run: |
-        vcpkg install boost-system@1.88.0 boost-program-options@1.88.0 boost-filesystem@1.88.0 --triplet x86-windows-static
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static
 
     - name: Configure CMake
       run: >
