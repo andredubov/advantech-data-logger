@@ -46,8 +46,8 @@ jobs:
       with:
         name: pci-1716-binaries-x64
         path: |
-          build/application/data-logger/Release/data-logger.exe
-          build/application/data-converter/Release/data-converter.exe
+          build/application/data-logger/Release/data-logger-windows-x64.exe
+          build/application/data-converter/Release/data-converter-windows-x64.exe
 
   build-x86:
     runs-on: windows-2022
@@ -88,8 +88,8 @@ jobs:
       with:
         name: pci-1716-binaries-x86
         path: |
-          build/application/data-logger/Release/data-logger.exe
-          build/application/data-converter/Release/data-converter.exe
+          build/application/data-logger/Release/data-logger-windows-i386.exe
+          build/application/data-converter/Release/data-converter-windows-i386.exe
 
   release:
     needs: [build-x64, build-x86]
@@ -115,8 +115,8 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         files: |
-          binaries/x64/*.exe
-          binaries/x86/*.exe
+          binaries/x64/*-windows-x64.exe
+          binaries/x86/*-windows-i386.exe
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
