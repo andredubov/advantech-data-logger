@@ -22,13 +22,13 @@ jobs:
         path: |
           ~/.cache/vcpkg
           ${{ github.workspace }}/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        key: ${{ runner.os }}-vcpkg-x64-${{ hashFiles('vcpkg.json') || 'static-v1' }} # или фиксированный ключ
         restore-keys: |
-          ${{ runner.os }}-vcpkg-
+          ${{ runner.os }}-vcpkg-x64-
 
     - name: Install Boost via vcpkg
       run: |
-        vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows-static
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows-static --x-install-root="${{ github.workspace }}/vcpkg_installed
   
     - name: Configure CMake
       run: >
@@ -64,13 +64,13 @@ jobs:
         path: |
           ~/.cache/vcpkg
           ${{ github.workspace }}/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
+        key: ${{ runner.os }}-vcpkg-x86-${{ hashFiles('vcpkg.json') || 'static-v1' }} # или фиксированный ключ
         restore-keys: |
-          ${{ runner.os }}-vcpkg-
+          ${{ runner.os }}-vcpkg-x86-
 
     - name: Install Boost via vcpkg
       run: |
-        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static --x-install-root="${{ github.workspace }}/vcpkg_installed
 
     - name: Configure CMake
       run: >
