@@ -47,8 +47,14 @@ jobs:
       with:
         name: pci-1716-binaries-x64
         path: |
-          build/application/data-logger/Release/data-logger.exe
-          build/application/data-converter/Release/data-converter.exe
+          build/application/data-logger/Release/data-logger-windows-x64.exe
+          build/application/data-converter/Release/data-converter-windows-x64.exe
+
+    - name: Rename executables (x64)
+      run: |
+        Rename-Item -Path "build/application/data-logger/Release/data-logger.exe" -NewName "data-logger-windows-x64.exe"
+        Rename-Item -Path "build/application/data-converter/Release/data-converter.exe" -NewName "data-converter-windows-x64.exe"
+      shell: pwsh
 
   build-x86:
     runs-on: windows-2022
@@ -90,8 +96,14 @@ jobs:
       with:
         name: pci-1716-binaries-x86
         path: |
-          build/application/data-logger/Release/data-logger.exe
-          build/application/data-converter/Release/data-converter.exe
+          build/application/data-logger/Release/data-logger-windows-i386.exe
+          build/application/data-converter/Release/data-converter-windows-i386.exe
+
+    - name: Rename executables (x86)
+      run: |
+        Rename-Item -Path "build/application/data-logger/Release/data-logger.exe" -NewName "data-logger-windows-i386.exe"
+        Rename-Item -Path "build/application/data-converter/Release/data-converter.exe" -NewName "data-converter-windows-i386.exe"
+      shell: pwsh
 
   release:
     needs: [build-x64, build-x86]
