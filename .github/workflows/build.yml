@@ -37,6 +37,7 @@ jobs:
         -D_WIN32_WINNT=0x0601 
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
         -DVCPKG_TARGET_TRIPLET=x64-windows-static
+        -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x64-windows-static"
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
@@ -79,6 +80,7 @@ jobs:
         -D_WIN32_WINNT=0x0601 
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
         -DVCPKG_TARGET_TRIPLET=x86-windows-static
+        -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x86-windows-static"
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
