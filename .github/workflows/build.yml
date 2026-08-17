@@ -125,12 +125,18 @@ jobs:
         name: pci-1716-binaries-x86
         path: binaries/x86
 
+    - name: Flatten artifact directories
+      run: |
+        find binaries -type f -name "*.exe" -exec mv -v {} binaries/ \;
+        rm -rf binaries/x64 binaries/x86
+      shell: bash
+
     - name: Create Release
       uses: softprops/action-gh-release@v3
       with:
         files: |
-          binaries/x64/*-windows-x64.exe
-          binaries/x86/*-windows-i386.exe
+          binaries/*-windows-x64.exe
+          binaries/*-windows-i386.exe
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
