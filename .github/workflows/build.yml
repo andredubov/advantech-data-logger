@@ -16,15 +16,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Setup vcpkg
-      run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        .\vcpkg\bootstrap-vcpkg.bat
-        .\vcpkg\vcpkg integrate install
-        .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows
+    - name: Install Boost
+      id: install-boost
+      uses: MarkusJx/install-boost@v2.4.5 
+      with:
+        boost_version: 1.88.0
+        platform_version: 2022
+        toolset: msvc
+        link: static
+        arch: amd64
 
     - name: Configure CMake
-      run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+      run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601 -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib
+      env:
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
@@ -46,15 +51,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Setup vcpkg
-      run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        .\vcpkg\bootstrap-vcpkg.bat
-        .\vcpkg\vcpkg integrate install
-        .\vcpkg\vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows
+    - name: Install Boost
+      id: install-boost
+      uses: MarkusJx/install-boost@v2.4.5      
+      with:
+        boost_version: 1.87.0
+        platform_version: 2022
+        toolset: msvc
+        link: static
+        arch: x86,
 
     - name: Configure CMake
-      run: cmake -A Win32 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601
+      run: cmake -A Win32 -S . -B ./build -DCMAKE_GENERATOR_TOOLSET=v143 -D_WIN32_WINNT=0x0601 -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib
+      env:
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
 
     - name: Build Release
       run: cmake --build ./build --config Release --target ALL_BUILD -j 6
