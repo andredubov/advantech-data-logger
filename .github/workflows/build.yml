@@ -102,13 +102,13 @@ jobs:
     - name: Download artifacts (x64)
       uses: actions/download-artifact@v8
       with:
-        name: pci-1716-binaries-x64
+        name: pci-1716-app-windows-x64
         path: binaries/x64
 
     - name: Download artifacts (x86)
       uses: actions/download-artifact@v8
       with:
-        name: pci-1716-binaries-x86
+        name: pci-1716-app-windows-i386
         path: binaries/x86
 
     - name: Create Release
