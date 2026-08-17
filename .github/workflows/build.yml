@@ -47,8 +47,8 @@ jobs:
       with:
         name: pci-1716-binaries-x64
         path: |
-          build/application/data-logger/Release/data-logger-windows-x64.exe
-          build/application/data-converter/Release/data-converter-windows-x64.exe
+          build/application/data-logger/Release/data-logger.exe
+          build/application/data-converter/Release/data-converter.exe
 
   build-x86:
     runs-on: windows-2022
