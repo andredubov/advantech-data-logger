@@ -23,7 +23,7 @@ jobs:
         boost_version: 1.88.0
         platform_version: 2022
         toolset: msvc
-        link: static-runtime
+        link: static
         arch: x86
 
     - name: Configure CMake
@@ -58,7 +58,7 @@ jobs:
         boost_version: 1.87.0
         platform_version: 2022
         toolset: msvc
-        link: static-runtime
+        link: static
         arch: x86
 
     - name: Configure CMake
