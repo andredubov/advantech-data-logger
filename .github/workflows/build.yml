@@ -28,7 +28,7 @@ jobs:
 
     - name: Install Boost via vcpkg
       run: |
-        vcpkg install boost:x64-windows-static
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x64-windows-static
   
     - name: Configure CMake
       run: >
@@ -67,6 +67,10 @@ jobs:
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }} # или фиксированный ключ
         restore-keys: |
           ${{ runner.os }}-vcpkg-
+
+    - name: Install Boost via vcpkg
+      run: |
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static
 
     - name: Configure CMake
       run: >
