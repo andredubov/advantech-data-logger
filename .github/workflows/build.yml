@@ -53,7 +53,7 @@ jobs:
 
     - name: Install Boost
       id: install-boost
-      uses: MarkusJx/install-boost@v2.4.5      
+      uses: MarkusJx/install-boost@v2.6.0      
       with:
         boost_version: 1.87.0
         platform_version: 2022
