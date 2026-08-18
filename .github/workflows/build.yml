@@ -129,18 +129,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-vcpkg-xp-
 
-    - name: Install Boost via vcpkg
+    - name: Install Boost via vcpkg (XP toolset)
       run: |
-        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static --x-install-root="${{ github.workspace }}/vcpkg_installed"
+        vcpkg remove boost-system boost-program-options boost-filesystem --triplet x86-windows-static --recurse || true
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static --x-install-root="${{ github.workspace }}/vcpkg_installed" --overlay-ports=C:/vcpkg/ports
 
     - name: Configure CMake for Windows XP
       run: >
         cmake -G "Visual Studio 15 2017" -A Win32 -S . -B ./build-xp
+        -T v141_xp
         -D_WIN32_WINNT=0x0501
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
         -DVCPKG_TARGET_TRIPLET=x86-windows-static
         -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x86-windows-static"
-        -DCMAKE_CXX_FLAGS="/MT"
+        -DCMAKE_CXX_FLAGS="/MT /EHsc"
 
     - name: Build Release for Windows XP
       run: cmake --build ./build-xp --config Release --target ALL_BUILD -j 4
