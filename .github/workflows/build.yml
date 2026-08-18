@@ -71,7 +71,7 @@ jobs:
         path: |
           ~/.cache/vcpkg
           ${{ github.workspace }}/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-x86-${{ hashFiles('vcpkg.json') || 'static-v1' }} # или фиксированный ключ
+        key: ${{ runner.os }}-vcpkg-x86-${{ hashFiles('vcpkg.json') || 'static-v1' }}
         restore-keys: |
           ${{ runner.os }}-vcpkg-x86-
 
@@ -105,8 +105,63 @@ jobs:
           build/application/data-logger/Release/data-logger-windows-i386.exe
           build/application/data-converter/Release/data-converter-windows-i386.exe
 
+  build-xp:
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [Win32]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Install Visual Studio 2017 Build Tools
+      run: |
+        choco install visualstudio2017buildtools -y --limit-output
+        choco install visualstudio2017-workload-vctools -y --limit-output
+
+    - name: Setup vcpkg cache
+      uses: actions/cache@v6.1.0
+      with:
+        path: |
+          ~/.cache/vcpkg
+          ${{ github.workspace }}/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-xp-${{ hashFiles('vcpkg.json') || 'static-v1' }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-xp-
+
+    - name: Install Boost via vcpkg
+      run: |
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-static --x-install-root="${{ github.workspace }}/vcpkg_installed"
+
+    - name: Configure CMake for Windows XP
+      run: >
+        cmake -A Win32 -S . -B ./build-xp
+        -DCMAKE_GENERATOR_TOOLSET=v141_xp
+        -D_WIN32_WINNT=0x0501
+        -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_TARGET_TRIPLET=x86-windows-static
+        -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x86-windows-static"
+        -DCMAKE_CXX_FLAGS="/MT"
+
+    - name: Build Release for Windows XP
+      run: cmake --build ./build-xp --config Release --target ALL_BUILD -j 4
+
+    - name: Rename executables (XP)
+      run: |
+        Rename-Item -Path "build-xp/application/data-logger/Release/data-logger.exe" -NewName "data-logger-windows-xp.exe"
+        Rename-Item -Path "build-xp/application/data-converter/Release/data-converter.exe" -NewName "data-converter-windows-xp.exe"
+      shell: pwsh
+
+    - name: Upload artifacts (XP)
+      uses: actions/upload-artifact@v7
+      with:
+        name: pci-1716-binaries-xp
+        path: |
+          build-xp/application/data-logger/Release/data-logger-windows-xp.exe
+          build-xp/application/data-converter/Release/data-converter-windows-xp.exe
+
   release:
-    needs: [build-x64, build-x86]
+    needs: [build-x64, build-x86, build-xp]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -125,10 +180,16 @@ jobs:
         name: pci-1716-binaries-x86
         path: binaries/x86
 
+    - name: Download artifacts (XP)
+      uses: actions/download-artifact@v8
+      with:
+        name: pci-1716-binaries-xp
+        path: binaries/xp
+
     - name: Flatten artifact directories
       run: |
         find binaries -type f -name "*.exe" -exec mv -v {} binaries/ \;
-        rm -rf binaries/x64 binaries/x86
+        rm -rf binaries/x64 binaries/x86 binaries/xp
       shell: bash
 
     - name: Create Release
@@ -137,6 +198,7 @@ jobs:
         files: |
           binaries/*-windows-x64.exe
           binaries/*-windows-i386.exe
+          binaries/*-windows-xp.exe
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
