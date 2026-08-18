@@ -118,6 +118,7 @@ jobs:
       run: |
         choco install visualstudio2017buildtools -y --limit-output
         choco install visualstudio2017-workload-vctools -y --limit-output
+        "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe" modify --installPath "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools" --add Microsoft.VisualStudio.Component.VC.Tools.141.xp.x86 --quiet --norestart
 
     - name: Setup vcpkg cache
       uses: actions/cache@v6.1.0
