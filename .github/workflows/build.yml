@@ -117,13 +117,31 @@ jobs:
     - name: Install v141_xp Toolset
       shell: powershell
       run: |
-        # Поиск пути к установленной Visual Studio 2022
-        $vsPath = &(build_tools_path\vswhere.exe) -latest -property installationPath
+        # vswhere доступна глобально в GitHub Actions
+        $vsPath = vswhere.exe -latest -property installationPath
+        
         if (-not $vsPath) {
-            $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-        }        
-        # Запуск установщика Visual Studio для добавления компонента WinXP
-        Start-Process -FilePath "$vsPath\Common7\IDE\vs_enterprise.exe" -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.WinXP --passive --norestart --wait" -Wait
+            Write-Error "Visual Studio не найдена!"
+            exit 1
+        }
+
+        Write-Host "Найдена VS по пути: $vsPath"
+        Write-Host "Установка компонента v141_xp..."
+
+        # Запуск установщика с флагом ожидания (--wait)
+        $process = Start-Process -FilePath "$vsPath\Common7\IDE\vs_enterprise.exe" `
+          -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.WinXP --passive --norestart --wait" `
+          -NoNewWindow -PassThru
+
+        # Ждем завершения установки
+        $process.WaitForExit()
+
+        if ($process.ExitCode -eq 0) {
+            Write-Host "Компонент v141_xp успешно установлен."
+        } else {
+            Write-Error "Ошибка установки. Код возврата: $($process.ExitCode)"
+            exit $process.ExitCode
+        }
 
     - name: Create custom Windows XP triplet
       run: |
