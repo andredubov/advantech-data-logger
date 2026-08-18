@@ -171,16 +171,21 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-vcpkg-xp-
 
+    - name: Download Legacy vcpkg Ports (XP Compatible)
+      shell: powershell
+      run: |
+        Write-Host "Скачивание старой базы портов vcpkg через PowerShell..."
+        if (-not (Test-Path "vcpkg-legacy-ports")) {
+            git clone --depth 1 --branch 2022.11.14 https://github.com vcpkg-legacy-ports
+        }
+
     - name: Install Boost via vcpkg (XP triplet)
       shell: cmd
       run: |
         :: 1. Инициализируем окружение v141_xp
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86 -vcvars_ver=14.16
         
-        :: 2. Клонируем старые порты (в одну строчку во избежание багов экранирования Git)
-        if not exist "vcpkg-legacy-ports" git clone --depth 1 --branch 2022.11.14 https://github.com vcpkg-legacy-ports
-        
-        :: 3. Запуск установки в одну строку с принудительным указанием корня vcpkg-root
+        :: 2. Запускаем установку. Порты уже гарантированно лежат на диске
         vcpkg install boost-system boost-program-options boost-filesystem --vcpkg-root="C:\vcpkg" --triplet=x86-windows-xp --overlay-triplets="./custom-triplets" --overlay-ports="./vcpkg-legacy-ports/ports" --x-install-root="%GITHUB_WORKSPACE%/vcpkg_installed"
 
     - name: Build Release for Windows XP
