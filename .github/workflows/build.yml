@@ -114,6 +114,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
+    - name: Install Visual Studio 2017 Build Tools with XP support
+      run: |
+        choco install visualstudio2017buildtools visualstudio2017-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.xp" -y
+      shell: pwsh
+
     - name: Create custom Windows XP triplet
       run: |
         $TripletContent = @"
