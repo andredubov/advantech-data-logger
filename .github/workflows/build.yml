@@ -174,17 +174,25 @@ jobs:
     - name: Download Legacy vcpkg Ports via ZIP (XP Compatible)
       shell: powershell
       run: |
-        Write-Host "Downloading vcpkg ports snapshot (late 2022) without Git..."
+        Write-Host "Скачивание среза портов vcpkg (конец 2022 года) через curl..."
         
         # Ссылка на архив конкретного коммита реестра (14 ноября 2022), где Boost 1.80.0 стабилен под XP
         $Url = "https://github.com"
         $ZipPath = "./vcpkg-legacy.zip"
         
-        # Скачиваем архив напрямую через системный HTTP-клиент
-        Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+        # Флаг -L обрабатывает редиректы серверов GitHub, -o указывает выходной файл
+        curl.exe -L $Url -o $ZipPath
+        
+        # Проверяем размер скачанного файла, чтобы убедиться в успехе
+        $fileSize = (Get-Item $ZipPath).Length
+        Write-Host "Размер скачанного архива: $fileSize байт"
+        if ($fileSize -lt 1000) {
+            Write-Error "Файл скачался некорректно (слишком маленький размер)."
+            exit 1
+        }
         
         Write-Host "Распаковка портов..."
-        Expand-Archive -Path $ZipPath -DestinationPath "./vcpkg-extracted"
+        Expand-Archive -Path $ZipPath -DestinationPath "./vcpkg-extracted" -Force
         
         # Переименовываем корневую папку из архива в наш рабочий каталог
         Move-Item -Path "./vcpkg-extracted/vcpkg-8064972e212fa9202579df20af3104fb472097b6" -Destination "./vcpkg-legacy-ports"
