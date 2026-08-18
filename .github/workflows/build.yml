@@ -117,27 +117,31 @@ jobs:
     - name: Install v141_xp Toolset
       shell: powershell
       run: |
-        # vswhere доступна глобально в GitHub Actions
         $vsPath = vswhere.exe -latest -property installationPath
-        
         if (-not $vsPath) {
             Write-Error "Visual Studio не найдена!"
             exit 1
         }
-
-        Write-Host "Найдена VS по пути: $vsPath"
-        Write-Host "Установка компонента v141_xp..."
-
-        # Запуск установщика с флагом ожидания (--wait)
-        $process = Start-Process -FilePath "$vsPath\Common7\IDE\vs_enterprise.exe" `
+        
+        # Стандартный путь к установщику Visual Studio
+        $installerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        
+        if (-not (Test-Path $installerPath)) {
+            Write-Error "Установщик VS не найден по пути: $installerPath"
+            exit 1
+        }
+        
+        Write-Host "Запуск установки компонента v141_xp..."
+        
+        # Модификация VS через официальный vs_installer
+        $process = Start-Process -FilePath $installerPath `
           -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.WinXP --passive --norestart --wait" `
           -NoNewWindow -PassThru
-
-        # Ждем завершения установки
+        
         $process.WaitForExit()
-
-        if ($process.ExitCode -eq 0) {
-            Write-Host "Компонент v141_xp успешно установлен."
+        
+        if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
+            Write-Host "Компонент v141_xp успешно установлен (или требует перезагрузки, код: $($process.ExitCode))."
         } else {
             Write-Error "Ошибка установки. Код возврата: $($process.ExitCode)"
             exit $process.ExitCode
