@@ -117,29 +117,34 @@ jobs:
     - name: Install v141_xp Toolset
       shell: powershell
       run: |
-        $InstallerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-        $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+        $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        $vsInstance = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
         
-        Write-Host "Шаг 1: Принудительное обновление самого Visual Studio Installer..."
-        # Без этого шага модификация завершается ошибкой с кодом 1
-        $updateProcess = Start-Process -FilePath $InstallerPath -ArgumentList "update --quiet --wait" -Wait -PassThru -WindowStyle Hidden
+        Write-Host "1. Принудительное обновление самого Visual Studio Installer..."
+        $updateProcess = Start-Process -FilePath $installer -ArgumentList "update --passive --norestart" -Wait -PassThru
         
-        Write-Host "Шаг 2: Установка компилятора VS 2017 (v141) и надстройки Windows XP..."
-        $Arguments = @(
-            '/c', "vs_installer.exe", 'modify',
-            '--installPath', "`"$InstallPath`"",
-            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
-            '--add', 'Microsoft.VisualStudio.Component.WinXP',
-            '--noUpdateInstaller',
-            '--quiet', '--norestart', '--nocache'
+        Write-Host "2. Установка базового тулсета v141 и надстройки Windows XP..."
+        # Нам нужны: Core-компоненты C++, сам компилятор v141 и пакет XP
+        $args = @(
+            "modify",
+            "--installPath", "`"$vsInstance`"",
+            "--add", "Microsoft.VisualStudio.Component.VC.CoreIde",
+            "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64",
+            "--add", "Microsoft.VisualStudio.Component.WinXP",
+            "--passive",
+            "--norestart",
+            "--nocache"
         )
         
-        $process = Start-Process -FilePath "cmd.exe" -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+        $process = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru
         
+        Write-Host "Код завершения установки VS: $($process.ExitCode)"
+        
+        # Коды 0 (успех) и 3010 (успех, требуется перезагрузка) являются валидными
         if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
-            Write-Host "Компоненты v141 и v141_xp успешно добавлены!"
+            Write-Host "Компоненты v141_xp успешно интегрированы в Visual Studio 2022!"
         } else {
-            Write-Error "Установка завершилась с ошибкой. Код: $($process.ExitCode)"
+            Write-Error "Установка завершилась неудачно. Проверьте логи установки VS."
             exit $process.ExitCode
         }
 
