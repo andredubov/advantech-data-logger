@@ -171,19 +171,25 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-vcpkg-xp-
 
-    - name: Download Legacy vcpkg Ports (XP Compatible)
+    - name: Download Legacy vcpkg Ports via ZIP (XP Compatible)
       shell: powershell
       run: |
-        Write-Host "Cleaning Git URL rewrite rules and downloading legacy ports..."
+        Write-Host "Downloading vcpkg ports snapshot (late 2022) without Git..."
         
-        # Reset any global or system URL rewrites that might break the clone
-        git config --global --unset-all url.https://github.com
-        git config --global --unset-all url.https://github.com
+        # Ссылка на архив конкретного коммита реестра (14 ноября 2022), где Boost 1.80.0 стабилен под XP
+        $Url = "https://github.com"
+        $ZipPath = "./vcpkg-legacy.zip"
         
-        if (-not (Test-Path "vcpkg-legacy-ports")) {
-            # The -c flag ensures no URL rewrites interfere with the clone
-            git -c url."https://github.com/".insteadOf="" clone --depth 1 --branch 2022.11.14 https://github.com vcpkg-legacy-ports
-        }
+        # Скачиваем архив напрямую через системный HTTP-клиент
+        Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+        
+        Write-Host "Распаковка портов..."
+        Expand-Archive -Path $ZipPath -DestinationPath "./vcpkg-extracted"
+        
+        # Переименовываем корневую папку из архива в наш рабочий каталог
+        Move-Item -Path "./vcpkg-extracted/vcpkg-8064972e212fa9202579df20af3104fb472097b6" -Destination "./vcpkg-legacy-ports"
+        
+        Write-Host "Старые порты успешно подготовлены!"
 
     - name: Install Boost via vcpkg (XP triplet)
       shell: cmd
