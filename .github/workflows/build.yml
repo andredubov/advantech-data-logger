@@ -114,9 +114,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Install Visual Studio 2017 Build Tools with XP support
+    - name: Install Visual Studio 2017 Build Tools
       run: |
-        choco install visualstudio2017buildtools visualstudio2017-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.xp" -y
+        choco install visualstudio2017buildtools -y
+      shell: pwsh
+
+    - name: Install Windows XP toolset for VS 2017
+      run: |
+        $vsInstaller = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        & $vsInstaller modify --installPath "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools" --add Microsoft.VisualStudio.Component.VC.Tools.x86.xp --quiet --norestart
       shell: pwsh
 
     - name: Create custom Windows XP triplet
@@ -125,7 +131,7 @@ jobs:
         set(VCPKG_TARGET_ARCHITECTURE x86)
         set(VCPKG_CRT_LINKAGE static)
         set(VCPKG_LIBRARY_LINKAGE static)
-        set(VCPKG_PLATFORM_TOOLSET v140_xp)
+        set(VCPKG_PLATFORM_TOOLSET v141_xp)
         "@
         New-Item -ItemType Directory -Path "C:/vcpkg/triplets/community" -Force | Out-Null
         Set-Content -Path "C:/vcpkg/triplets/community/x86-windows-xp.cmake" -Value $TripletContent
@@ -149,7 +155,7 @@ jobs:
     - name: Configure CMake for Windows XP
       run: >
         cmake -A Win32 -S . -B ./build-xp
-        -DCMAKE_GENERATOR_TOOLSET=v140_xp
+        -DCMAKE_GENERATOR_TOOLSET=v141_xp
         -D_WIN32_WINNT=0x0501
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
         -DVCPKG_TARGET_TRIPLET=x86-windows-xp
