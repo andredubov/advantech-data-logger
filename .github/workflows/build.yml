@@ -186,18 +186,10 @@ jobs:
           ${{ runner.os }}-vcpkg-xp-
 
     - name: Install Boost via vcpkg (XP triplet)
+      shell: cmd
       run: |
-        # Initialize v141_xp environment for vcpkg
-        $vcvarsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"
-        if (Test-Path $vcvarsPath) {
-          Write-Host "Initializing v141_xp environment..."
-          cmd /c "$vcvarsPath x86 -vcvars_ver=14.16"
-        } else {
-          Write-Host "vcvarsall.bat not found at $vcvarsPath"
-          exit 1
-        }
-        
-        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-xp --overlay-triplets=./custom-triplets --x-install-root="${{ github.workspace }}/vcpkg_installed"
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86 -vcvars_ver=14.16
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-xp --overlay-triplets=./custom-triplets --x-install-root="%GITHUB_WORKSPACE%\vcpkg_installed"
 
     - name: Configure CMake for Windows XP
       run: >
