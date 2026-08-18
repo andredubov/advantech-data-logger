@@ -122,8 +122,8 @@ jobs:
         set(VCPKG_LIBRARY_LINKAGE static)
         set(VCPKG_PLATFORM_TOOLSET v141_xp)
         "@
-        New-Item -Directory -Path "C:/vcpkg/triplets/community" -Force | Out-Null
-        Set-Content -Path "C:/vpkg/triplets/community/x86-windows-xp.cmake" -Value $TripletContent
+        New-Item -ItemType Directory -Path "C:/vcpkg/triplets/community" -Force | Out-Null
+        Set-Content -Path "C:/vcpkg/triplets/community/x86-windows-xp.cmake" -Value $TripletContent
       shell: pwsh
 
     - name: Setup vcpkg cache
