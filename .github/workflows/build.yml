@@ -117,33 +117,26 @@ jobs:
     - name: Install v141_xp Toolset
       shell: powershell
       run: |
-        $vsPath = vswhere.exe -latest -property installationPath
-        if (-not $vsPath) {
-            Write-Error "Visual Studio не найдена!"
-            exit 1
-        }
+        $InstallerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
         
-        # Стандартный путь к установщику Visual Studio
-        $installerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        Write-Host "Запуск установки компонента v141_xp через CMD..."
         
-        if (-not (Test-Path $installerPath)) {
-            Write-Error "Установщик VS не найден по пути: $installerPath"
-            exit 1
-        }
+        # Набор аргументов: принудительно тихий режим без кэширования локальных файлов
+        $Arguments = @(
+            '/c', "vs_installer.exe", 'modify',
+            '--installPath', "`"$InstallPath`"",
+            '--add', 'Microsoft.VisualStudio.Component.WinXP',
+            '--quiet', '--norestart', '--nocache'
+        )
         
-        Write-Host "Запуск установки компонента v141_xp..."
-        
-        # Модификация VS через официальный vs_installer
-        $process = Start-Process -FilePath $installerPath `
-          -ArgumentList "modify --installPath `"$vsPath`" --add Microsoft.VisualStudio.Component.WinXP --passive --norestart --wait" `
-          -NoNewWindow -PassThru
-        
-        $process.WaitForExit()
+        # Вызов через cmd.exe предотвращает блокировки UI инсталлятора
+        $process = Start-Process -FilePath "cmd.exe" -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
         
         if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
-            Write-Host "Компонент v141_xp успешно установлен (или требует перезагрузки, код: $($process.ExitCode))."
+            Write-Host "Компонент v141_xp успешно добавлен!"
         } else {
-            Write-Error "Ошибка установки. Код возврата: $($process.ExitCode)"
+            Write-Error "Установка завершилась с ошибкой. Код: $($process.ExitCode)"
             exit $process.ExitCode
         }
 
