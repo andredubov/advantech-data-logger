@@ -120,13 +120,17 @@ jobs:
         $InstallerPath = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
         $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
         
-        Write-Host "Установка компилятора VS 2017 (v141) и надстройки Windows XP..."
+        Write-Host "Шаг 1: Принудительное обновление самого Visual Studio Installer..."
+        # Без этого шага модификация завершается ошибкой с кодом 1
+        $updateProcess = Start-Process -FilePath $InstallerPath -ArgumentList "update --quiet --wait" -Wait -PassThru -WindowStyle Hidden
         
+        Write-Host "Шаг 2: Установка компилятора VS 2017 (v141) и надстройки Windows XP..."
         $Arguments = @(
             '/c', "vs_installer.exe", 'modify',
             '--installPath', "`"$InstallPath`"",
             '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
             '--add', 'Microsoft.VisualStudio.Component.WinXP',
+            '--noUpdateInstaller',
             '--quiet', '--norestart', '--nocache'
         )
         
