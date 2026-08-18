@@ -117,40 +117,35 @@ jobs:
     - name: Install v141_xp Toolset
       shell: powershell
       run: |
-        $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+        Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer"
         $vsInstance = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
         
-        Write-Host "1. Forcing Visual Studio Installer update..."
-        $updateProcess = Start-Process -FilePath $installer -ArgumentList "update --passive --norestart" -Wait -PassThru
+        Write-Host "1. Обновление Visual Studio Installer..."
+        $updateProcess = Start-Process -FilePath ".\vs_installer.exe" -ArgumentList "update --quiet --wait" -Wait -PassThru -WindowStyle Hidden
         
-        Write-Host "2. Installing v141 toolset and Windows XP add-on..."
-        # Нам нужны: Core-компоненты C++, сам компилятор v141 и пакет XP
+        Write-Host "2. Установка компилятора v141 и надстройки Windows XP (Тихий режим)..."
         $args = @(
             "modify",
             "--installPath", "`"$vsInstance`"",
             "--add", "Microsoft.VisualStudio.Component.VC.CoreIde",
             "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64",
             "--add", "Microsoft.VisualStudio.Component.WinXP",
-            "--passive",
+            "--quiet",
             "--norestart",
             "--nocache"
         )
         
-        $process = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru
+        $process = Start-Process -FilePath ".\vs_installer.exe" -ArgumentList $args -Wait -PassThru -WindowStyle Hidden
         
-        Write-Host "VS installation exit code: $($process.ExitCode)"
-        
-        # Codes 0 (success) and 3010 (success, reboot required) are valid
         if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
-            Write-Host "v141_xp components successfully integrated into Visual Studio 2022!"
+            Write-Host "Компоненты v141_xp успешно добавлены!"
         } else {
-            Write-Error "Installation failed. Check VS installation logs."
+            Write-Error "Установка завершилась с ошибкой. Код: $($process.ExitCode)"
             exit $process.ExitCode
         }
 
     - name: Create custom XP triplet
       run: |
-        # Создаем кастомный триплет локально в рабочей папке
         New-Item -ItemType Directory -Path "./custom-triplets" -Force | Out-Null
         $TripletContent = @"
         set(VCPKG_TARGET_ARCHITECTURE x86)
@@ -159,6 +154,21 @@ jobs:
         set(VCPKG_PLATFORM_TOOLSET v141_xp)
         "@
         Set-Content -Path "./custom-triplets/x86-windows-xp.cmake" -Value $TripletContent
+      shell: pwsh
+
+    - name: Configure Pinned vcpkg Registry for XP
+      run: |
+        # Исправлен URL-адрес репозитория для корректного отката к реестру 2022 года
+        $VcpkgConfig = @"
+        {
+          "default-registry": {
+            "kind": "git",
+            "baseline": "8064972e212fa9202579df20af3104fb472097b6",
+            "repository": "https://github.com"
+          }
+        }
+        "@
+        Set-Content -Path "./vcpkg-configuration.json" -Value $VcpkgConfig
       shell: pwsh
 
     - name: Setup vcpkg cache
@@ -171,43 +181,23 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-vcpkg-xp-
 
-    - name: Download Legacy vcpkg Ports via ZIP (XP Compatible)
-      shell: powershell
-      run: |
-        Write-Host "Скачивание среза портов vcpkg (конец 2022 года) через curl..."
-        
-        # Ссылка на архив конкретного коммита реестра (14 ноября 2022), где Boost 1.80.0 стабилен под XP
-        $Url = "https://github.com"
-        $ZipPath = "./vcpkg-legacy.zip"
-        
-        # Флаг -L обрабатывает редиректы серверов GitHub, -o указывает выходной файл
-        curl.exe -L $Url -o $ZipPath
-        
-        # Проверяем размер скачанного файла, чтобы убедиться в успехе
-        $fileSize = (Get-Item $ZipPath).Length
-        Write-Host "Размер скачанного архива: $fileSize байт"
-        if ($fileSize -lt 1000) {
-            Write-Error "Файл скачался некорректно (слишком маленький размер)."
-            exit 1
-        }
-        
-        Write-Host "Распаковка портов..."
-        Expand-Archive -Path $ZipPath -DestinationPath "./vcpkg-extracted" -Force
-        
-        # Переименовываем корневую папку из архива в наш рабочий каталог
-        Move-Item -Path "./vcpkg-extracted/vcpkg-8064972e212fa9202579df20af3104fb472097b6" -Destination "./vcpkg-legacy-ports"
-        
-        Write-Host "Старые порты успешно подготовлены!"
-
     - name: Install Boost via vcpkg (XP triplet)
       shell: cmd
       run: |
-        :: 1. Инициализируем окружение v141_xp
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86 -vcvars_ver=14.16
-        
-        :: 2. Запускаем установку. Порты уже гарантированно лежат на диске
-        vcpkg install boost-system boost-program-options boost-filesystem --vcpkg-root="C:\vcpkg" --triplet=x86-windows-xp --overlay-triplets="./custom-triplets" --overlay-ports="./vcpkg-legacy-ports/ports" --x-install-root="%GITHUB_WORKSPACE%/vcpkg_installed"
+        if exist "%GITHUB_WORKSPACE%/vcpkg_installed" rmdir /s /q "%GITHUB_WORKSPACE%/vcpkg_installed"
+        vcpkg install boost-system boost-program-options boost-filesystem --vcpkg-root="C:\vcpkg" --triplet=x86-windows-xp --overlay-triplets="./custom-triplets" --x-install-root="%GITHUB_WORKSPACE%/vcpkg_installed"
 
+    - name: Configure CMake for Windows XP
+      run: >
+        cmake -A Win32 -S . -B ./build-xp
+        -DCMAKE_GENERATOR_TOOLSET=v141_xp
+        -D_WIN32_WINNT=0x0501
+        -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_TARGET_TRIPLET=x86-windows-xp
+        -DVCPKG_OVERLAY_TRIPLETS=./custom-triplets
+        -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x86-windows-xp"
+            
     - name: Build Release for Windows XP
       run: cmake --build ./build-xp --config Release --target ALL_BUILD -j 4
 
