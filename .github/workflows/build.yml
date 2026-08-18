@@ -114,15 +114,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Install Visual Studio 2017 Build Tools
-      run: |
-        choco install visualstudio2017buildtools -y
-      shell: pwsh
-
-    - name: Install Windows XP toolset for VS 2017
+    - name: List available VS components
       run: |
         $vsInstaller = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-        & $vsInstaller modify --installPath "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools" --add Microsoft.VisualStudio.Component.VC.Tools.x86.xp --quiet --norestart
+        & $vsInstaller list --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --includes
       shell: pwsh
 
     - name: Create custom Windows XP triplet
