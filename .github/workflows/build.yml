@@ -174,9 +174,15 @@ jobs:
     - name: Download Legacy vcpkg Ports (XP Compatible)
       shell: powershell
       run: |
-        Write-Host "Скачивание старой базы портов vcpkg через PowerShell..."
+        Write-Host "Cleaning Git URL rewrite rules and downloading legacy ports..."
+        
+        # Reset any global or system URL rewrites that might break the clone
+        git config --global --unset-all url.https://github.com
+        git config --global --unset-all url.https://github.com
+        
         if (-not (Test-Path "vcpkg-legacy-ports")) {
-            git clone --depth 1 --branch 2022.11.14 https://github.com vcpkg-legacy-ports
+            # The -c flag ensures no URL rewrites interfere with the clone
+            git -c url."https://github.com/".insteadOf="" clone --depth 1 --branch 2022.11.14 https://github.com vcpkg-legacy-ports
         }
 
     - name: Install Boost via vcpkg (XP triplet)
