@@ -120,10 +120,10 @@ jobs:
         $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
         $vsInstance = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
         
-        Write-Host "1. Принудительное обновление самого Visual Studio Installer..."
+        Write-Host "1. Forcing Visual Studio Installer update..."
         $updateProcess = Start-Process -FilePath $installer -ArgumentList "update --passive --norestart" -Wait -PassThru
         
-        Write-Host "2. Установка базового тулсета v141 и надстройки Windows XP..."
+        Write-Host "2. Installing v141 toolset and Windows XP add-on..."
         # Нам нужны: Core-компоненты C++, сам компилятор v141 и пакет XP
         $args = @(
             "modify",
@@ -138,13 +138,13 @@ jobs:
         
         $process = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru
         
-        Write-Host "Код завершения установки VS: $($process.ExitCode)"
+        Write-Host "VS installation exit code: $($process.ExitCode)"
         
-        # Коды 0 (успех) и 3010 (успех, требуется перезагрузка) являются валидными
+        # Codes 0 (success) and 3010 (success, reboot required) are valid
         if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
-            Write-Host "Компоненты v141_xp успешно интегрированы в Visual Studio 2022!"
+            Write-Host "v141_xp components successfully integrated into Visual Studio 2022!"
         } else {
-            Write-Error "Установка завершилась неудачно. Проверьте логи установки VS."
+            Write-Error "Installation failed. Check VS installation logs."
             exit $process.ExitCode
         }
 
