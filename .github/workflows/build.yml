@@ -114,10 +114,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
 
-    - name: Install Visual Studio 2017 Build Tools
+    - name: Create custom Windows XP triplet
       run: |
-        choco install visualstudio2017buildtools -y --limit-output
-        choco install visualstudio2017-workload-vctools -y --limit-output
+        $TripletContent = @"
+        set(VCPKG_TARGET_ARCHITECTURE x86)
+        set(VCPKG_CRT_LINKAGE static)
+        set(VCPKG_LIBRARY_LINKAGE static)
+        set(VCPKG_PLATFORM_TOOLSET v141_xp)
+        "@
+        New-Item -Directory -Path "C:/vcpkg/triplets/community" -Force | Out-Null
+        Set-Content -Path "C:/vpkg/triplets/community/x86-windows-xp.cmake" -Value $TripletContent
+      shell: pwsh
 
     - name: Setup vcpkg cache
       uses: actions/cache@v6.1.0
@@ -132,16 +139,16 @@ jobs:
     - name: Install Boost via vcpkg (XP triplet)
       run: |
         vcpkg remove boost-system boost-program-options boost-filesystem --triplet x86-windows-xp --recurse || true
-        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-xp --x-install-root="${{ github.workspace }}/vcpkg_installed" --overlay-ports=C:/vcpkg/ports
+        vcpkg install boost-system boost-program-options boost-filesystem --triplet x86-windows-xp --x-install-root="${{ github.workspace }}/vcpkg_installed"
 
     - name: Configure CMake for Windows XP
       run: >
-        cmake -G "Visual Studio 15 2017" -A Win32 -S . -B ./build-xp
+        cmake -A Win32 -S . -B ./build-xp
+        -DCMAKE_GENERATOR_TOOLSET=v141_xp
         -D_WIN32_WINNT=0x0501
         -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
         -DVCPKG_TARGET_TRIPLET=x86-windows-xp
         -DCMAKE_PREFIX_PATH="${{ github.workspace }}/vcpkg_installed/x86-windows-xp"
-        -DCMAKE_CXX_FLAGS="/MT /EHsc"
 
     - name: Build Release for Windows XP
       run: cmake --build ./build-xp --config Release --target ALL_BUILD -j 4
