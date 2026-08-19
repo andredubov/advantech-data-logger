@@ -3,6 +3,7 @@
 
 #include "IDataWriter.hpp"
 #include "ILogger.hpp"
+#include "DataFrame.hpp"
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -35,10 +36,10 @@ public:
     void stop();
 
     /**
-     * @brief Push data into the processing queue
-     * @param data Vector of doubles to be processed
+     * @brief Push data frame into the processing queue
+     * @param frame DataFrame containing timestamp and voltages
      */
-    void pushData(std::vector<double>&& data);
+    void pushDataFrame(DataFrame&& frame);
 
     /**
      * @brief Check if the engine is running
@@ -54,7 +55,7 @@ private:
     std::shared_ptr<app::IDataWriter> m_writer;
     std::shared_ptr<app::ILogger> m_logger;
 
-    std::queue<std::vector<double>> m_dataQueue;
+    std::queue<DataFrame> m_dataQueue;
     std::mutex m_queueMutex;
     std::condition_variable m_queueCV;
     std::atomic<bool> m_isRunning;

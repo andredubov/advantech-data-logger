@@ -58,13 +58,23 @@ void DataProcessingEngine::stop() {
     m_writer->close();
 }
 
-void DataProcessingEngine::pushData(std::vector<double>&& data) {
-    if (!m_isRunning || data.empty()) {
+// void DataProcessingEngine::pushData(std::vector<double>&& data) {
+//     if (!m_isRunning || data.empty()) {
+//         return;
+//     }
+
+//     std::lock_guard<std::mutex> lock(m_queueMutex);
+//     m_dataQueue.push(std::move(data));
+//     m_queueCV.notify_one();
+// }
+
+void DataProcessingEngine::pushDataFrame(DataFrame&& frame) {
+    if (!m_isRunning || !frame.isValid()) {
         return;
     }
 
     std::lock_guard<std::mutex> lock(m_queueMutex);
-    m_dataQueue.push(std::move(data));
+    m_dataQueue.push(std::move(frame));
     m_queueCV.notify_one();
 }
 
@@ -76,7 +86,7 @@ void DataProcessingEngine::writerThreadFunction() {
     uint64_t totalFramesWritten = 0;
 
     while (true) {
-        std::vector<double> localBuffer;
+        DataFrame localFrame;
 
         // Извлечение данных из очереди
         {
@@ -89,18 +99,19 @@ void DataProcessingEngine::writerThreadFunction() {
                 break;
             }
 
-            localBuffer = std::move(m_dataQueue.front());
+            localFrame = std::move(m_dataQueue.front());
             m_dataQueue.pop();
         }
 
         // Запись данных через writer
-        if (!localBuffer.empty()) {
-            m_writer->write(localBuffer);
+        if (localFrame.isValid()) {
+            m_writer->writeFrame(localFrame);
+            totalFramesWritten++;
         }
     }
 
     // После завершения цикла все данные записаны
-    m_logger->info("Writer thread finished processing all data.");
+    m_logger->info("Writer thread finished processing all data. Total frames written: %llu", totalFramesWritten);
 }
 
 } // namespace app
