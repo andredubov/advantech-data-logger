@@ -20,6 +20,7 @@ public:
 
     bool open(const std::string& filePath) override;
     void write(const std::vector<double>& data) override;
+    void writeFrame(const DataFrame& frame) override;
     void flush() override;
     void close() override;
     void setMetadata(double samplingRate, int startChannel, int endChannel, double startTime, double endTime) override;

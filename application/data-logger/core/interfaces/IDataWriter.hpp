@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include "DataFrame.hpp"
 
 namespace app {
 
@@ -22,10 +23,16 @@ public:
     virtual bool open(const std::string& filePath) = 0;
 
     /**
-     * @brief Write a chunk of data to the file
+     * @brief Write a chunk of data to the file (legacy method)
      * @param data Vector of doubles containing the data to write
      */
     virtual void write(const std::vector<double>& data) = 0;
+
+    /**
+     * @brief Write a data frame to the file (new method with timestamp and voltages)
+     * @param frame DataFrame containing timestamp and voltage values
+     */
+    virtual void writeFrame(const DataFrame& frame) = 0;
 
     /**
      * @brief Flush any buffered data to disk

@@ -135,6 +135,30 @@ void BinaryFileWriter::write(const std::vector<double>& data) {
     }
 }
 
+void BinaryFileWriter::writeFrame(const DataFrame& frame) {
+    if (!frame.isValid() || m_channelCount == 0) {
+        return;
+    }
+
+    // Проверяем, что количество каналов в кадре соответствует ожидаемому
+    if (frame.voltages.size() != static_cast<size_t>(m_channelCount)) {
+        m_logger->warning("[Writer Thread] Frame channel count mismatch: expected %d, got %zu",
+            m_channelCount, frame.voltages.size());
+        return;
+    }
+
+    // Записываем временную метку и напряжения для каждого канала
+    m_file.write(reinterpret_cast<const char*>(&frame.timestamp), sizeof(frame.timestamp));
+    m_file.write(reinterpret_cast<const char*>(frame.voltages.data()), 
+                 frame.voltages.size() * sizeof(double));
+
+    m_totalFramesWritten++;
+
+    if (!m_file) {
+        m_logger->error("[Writer Thread] Critical error: Physical disk write failure for frame!");
+    }
+}
+
 void BinaryFileWriter::flush() {
     m_file.flush();
 }
