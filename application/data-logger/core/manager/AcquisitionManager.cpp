@@ -125,7 +125,9 @@ void AcquisitionManager::stopAcquisition() {
 }
 
 void AcquisitionManager::shutdown() {
-    if (m_shutdownCalled) return;
+    if (m_shutdownCalled) {
+        return;
+    }
     m_shutdownCalled = true;
 
     if (m_acquisitionStarted) {
