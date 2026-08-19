@@ -33,6 +33,11 @@ cmake --build . --config Release
 | `application/data-logger/src/main.cpp` | Real-time acquisition with multithreaded writer |
 | `application/data-converter/src/main.cpp` | Binary-to-CSV converter |
 | `library/DAQNavi/inc/bdaqctrl.h` | Advantech DAQNavi SDK interface |
+| `application/data-logger/devices/advantech/AdvantechDevice.hpp` | Device implementation for PCI-1716 |
+| `application/data-logger/core/interfaces/IDataAcquisitionDevice.hpp` | Device abstraction interface |
+| `application/data-converter/core/inc/IDataReader.hpp` | Binary reader interface |
+| `application/data-converter/core/inc/IDataWriter.hpp` | CSV writer interface |
+| `application/data-converter/core/inc/ITimeFormatter.hpp` | Timestamp generation interface |
 
 ## Architecture Notes
 
@@ -41,6 +46,29 @@ cmake --build . --config Release
 - **Callbacks**: `BDAQCALL` convention; runs in high-priority Advantech thread
 - **Data format**: Binary file stores raw `double` samples (no headers)
 - **Converter**: Reads binary file, computes timestamps from sampling rate, outputs CSV with Russian locale (comma decimal separator)
+
+### Component Architecture
+
+All code lives in the `app` namespace. Key interfaces:
+- `IDataAcquisitionDevice`: Device abstraction with `initialize()`, `configure()`, `start()`, `stop()`, `dispose()`, `setDataReadyCallback()`
+- `ILogger`: Logging interface with `error()`, `warning()`, `info()`, `debug()`
+- `DataReadyCallback`: `std::function<void(const std::vector<double>&)>` for receiving sample data
+- `IDataReader` / `IDataWriter`: Converter interfaces for reading binary and writing CSV
+- `ITimeFormatter`: Timestamp generation interface
+
+### Thread Safety
+
+- The callback thread runs in the Advantech driver context with high priority
+- The writer thread owns the queue and writes to disk
+- `std::atomic<bool>` is used for `m_isRunning` to avoid data races
+- The callback must not block; it only pushes data to the queue
+
+### CMake Configuration
+
+- C++17 standard required
+- MSVC static linking (`/MT` or `/MTd`)
+- The `library::DAQNavi` target wraps the Advantech SDK
+- Output executables: `data-logger.exe` and `data-converter.exe`
 
 ## Command-Line Arguments (data-logger)
 
