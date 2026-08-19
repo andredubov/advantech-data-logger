@@ -150,9 +150,15 @@ void AcquisitionManager::setupDeviceCallback() {
 
     // Связываем callback устройства с движком
     m_device->setDataReadyCallback([this](const std::vector<double>& data) {
-        // Копируем данные в движок
-        std::vector<double> localData = data; // Пришлось скопировать, т.к. callback передаёт const
-        m_engine->pushData(std::move(localData));
+        // Здесь нужно преобразовать сырые данные в DataFrame с временной меткой
+        // Пока оставляем заглушку: создаём DataFrame с текущим временем
+        // В будущем здесь нужно будет вычислить напряжение и временную метку
+        double timestamp = std::chrono::duration<double>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count();
+        
+        app::DataFrame frame(timestamp, data);
+        m_engine->pushDataFrame(std::move(frame));
     });
 }
 
