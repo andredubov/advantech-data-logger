@@ -150,15 +150,25 @@ void AcquisitionManager::setupDeviceCallback() {
 
     // Связываем callback устройства с движком
     m_device->setDataReadyCallback([this](const std::vector<double>& data) {
-        // Здесь нужно преобразовать сырые данные в DataFrame с временной меткой
-        // Пока оставляем заглушку: создаём DataFrame с текущим временем
-        // В будущем здесь нужно будет вычислить напряжение и временную метку
-        double timestamp = std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch()
-        ).count();
-        
-        app::DataFrame frame(timestamp, data);
-        m_engine->pushDataFrame(std::move(frame));
+        // data содержит значения для всех каналов и фреймов
+        // Нужно разбить на отдельные фреймы
+        int channelCount = m_options->get_channel_count();
+        size_t framesCount = data.size() / channelCount;
+
+        for (size_t i = 0; i < framesCount; ++i) {
+            std::vector<double> voltages;
+            voltages.reserve(channelCount);
+            for (int ch = 0; ch < channelCount; ++ch) {
+                voltages.push_back(data[i * channelCount + ch]);
+            }
+
+            double timestamp = std::chrono::duration<double>(
+                std::chrono::system_clock::now().time_since_epoch()
+            ).count();
+
+            app::DataFrame frame(timestamp, std::move(voltages));
+            m_engine->pushDataFrame(std::move(frame));
+        }
     });
 }
 
