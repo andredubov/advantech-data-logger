@@ -52,7 +52,7 @@ bool CsvWriter::writeHeader(const DataHeader& header)
     // Записываем заголовок CSV
     m_file << "Absolute Time(s)";
     for (uint32_t ch = header.startChannel; ch <= header.endChannel; ++ch) {
-        m_file << ";Channel " << ch;
+        m_file << ",Channel " << ch;
     }
     m_file << "\n";
     
@@ -91,7 +91,7 @@ bool CsvWriter::writeFrame(const DataFrame& frame)
     
     // Записываем значения каналов
     for (size_t i = 0; i < frame.channels.size(); ++i) {
-        m_file << ";" << std::showpos << frame.channels[i] << std::noshowpos;
+        m_file << ", " << std::showpos << frame.channels[i] << std::noshowpos;
     }
     m_file << "\n";
     
