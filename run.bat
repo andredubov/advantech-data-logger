@@ -5,6 +5,8 @@ set BUILD_DIR=build\application
 set LOGGER_EXE=%BUILD_DIR%\data-logger\Release\data-logger.exe
 set CONVERTER_EXE=%BUILD_DIR%\data-converter\Release\data-converter.exe
 
+:menu
+cls
 echo ========================================
 echo   PCI-1716 Data Acquisition Tools
 echo ========================================
@@ -14,7 +16,6 @@ echo  2. Run data-converter (binary to CSV)
 echo  3. Exit
 echo.
 
-:menu
 set /p choice="Select an option (1-3): "
 if "%choice%"=="1" goto logger
 if "%choice%"=="2" goto converter
@@ -104,7 +105,6 @@ echo ========================================
 echo.
 echo [--input]   Input binary file name
 echo [--output]  Output CSV file name
-echo [--rate]    Sampling rate in Hz (for timestamp calculation)
 echo.
 echo Press Enter to use default values, or type your value.
 echo.
@@ -117,17 +117,12 @@ set OUTPUT_CSV=
 set /p OUTPUT_CSV="Output CSV file [daq_data.csv]: "
 if "!OUTPUT_CSV!"=="" set OUTPUT_CSV=daq_data.csv
 
-set RATE_CONV=
-set /p RATE_CONV="Sampling rate [250000]: "
-if "!RATE_CONV!"=="" set RATE_CONV=250000
-
 echo.
 echo Running data-converter with:
 echo   --input  !INPUT!
 echo   --output !OUTPUT_CSV!
-echo   --rate   !RATE_CONV!
 echo.
-"%CONVERTER_EXE%" --input "!INPUT!" --output "!OUTPUT_CSV!" --rate !RATE_CONV!
+"%CONVERTER_EXE%" --input "!INPUT!" --output "!OUTPUT_CSV!"
 if errorlevel 1 (
     echo.
     echo data-converter exited with error code %errorlevel%
