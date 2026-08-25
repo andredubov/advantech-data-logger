@@ -8,7 +8,7 @@
 app::command_line_options::command_line_options() :
     m_options(),
     m_help_string(),
-    m_version_string("1.0.0"),
+    m_version_string("1.0.5"),
     m_error_message(),    
     m_input_file_path(),
     m_output_file_path()
