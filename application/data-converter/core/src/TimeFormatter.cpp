@@ -18,7 +18,7 @@ std::string TimeFormatter::formatTime(double seconds) const
     std::strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M:%S", &timeInfo);
     
     char result[80];
-    std::snprintf(result, sizeof(result), "%s,%06d", buffer, milliseconds);
+    std::snprintf(result, sizeof(result), "%s,%03d", buffer, milliseconds);
     
     return std::string(result);
 }
