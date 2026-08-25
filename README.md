@@ -38,15 +38,40 @@ cmake --build . --config Release
 
 ### Run Data Logger
 
+Using the interactive launcher:
 ```bash
-data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000
+run.bat
+```
+Select option 1 and follow the prompts to configure acquisition parameters.
+
+Or run directly:
+```bash
+data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000 --output daq_data.bin
 ```
 
 ### Convert Binary to CSV
 
+Using the interactive launcher:
 ```bash
-data-converter.exe input.bin output.csv --rate 250000
+run.bat
 ```
+Select option 2 and follow the prompts to convert binary files to CSV.
+
+Or run directly:
+```bash
+data-converter.exe --input daq_data.bin --output daq_data.csv
+```
+
+### Interactive Launcher (`run.bat`)
+
+The project now includes an interactive batch script that simplifies running both executables:
+
+- **Menu-driven interface** with options for data-logger and data-converter
+- **Interactive argument input** with default values and validation
+- **Automatic console clearing** for improved user experience
+- **Error handling** with clear feedback
+
+Simply run `run.bat` from the project root and follow the on-screen prompts.
 
 ## Project Structure
 
@@ -118,17 +143,15 @@ All code lives in the `app` namespace. Key interfaces:
 |----------|-------------|---------|
 | `--input` | Input binary file path | Required |
 | `--output` | Output CSV file path | Required |
-| `--rate` | Sampling rate in Hz (used for timestamp calculation) | `250000` |
-| `--chunk-size` | Number of frames to process at once | `10000` |
 | `--help` | Show help message | — |
 | `--version` | Show version information | — |
 
 Example:
 ```bash
-data-converter.exe --input daq_data.bin --output measurements.csv --rate 100000
+data-converter.exe --input daq_data.bin --output measurements.csv
 ```
 
-> **Note:** The converter uses Russian locale by default, so CSV uses comma (`,`) as decimal separator. To use dot (`.`) separator, remove the locale setting in `CsvWriter.cpp`.
+> **Note:** The converter uses Russian locale by default. CSV uses semicolon (`;`) as field separator and comma (`,`) as decimal separator for proper Excel compatibility. Time format is `DD.MM.YYYY HH:MM:SS,mmm` with milliseconds separated by comma.
 
 ## Common Issues
 
