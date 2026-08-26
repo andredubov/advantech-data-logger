@@ -46,7 +46,9 @@ bool AcquisitionManager::initialize() {
     int samplesPerChannel = m_options->get_samples_per_channel();
     double samplingRate = m_options->get_sampling_rate();
 
-    if (!m_device->configure(startChannel, channelCount, samplesPerChannel, samplingRate)) {
+    std::string inputMode = m_options->get_input_mode();
+    std::string inputRange = m_options->get_input_range();
+    if (!m_device->configure(startChannel, channelCount, samplesPerChannel, samplingRate, inputMode, inputRange)) {
         m_logger->error("Failed to configure device");
         return false;
     }
