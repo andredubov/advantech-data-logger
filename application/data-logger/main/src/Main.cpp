@@ -12,16 +12,16 @@
  */
 int main(int argc, char* argv[]) {
     // 1. Парсинг аргументов командной строки
-    auto options = std::make_shared<app::command_line_options>();
+    auto options = std::make_shared<app::CommandLineOptions>();
     auto state = options->parse(argc, argv);
 
     switch (state) {
-        case app::command_line_options::state::success:
+        case app::CommandLineOptions::state::success:
             break;
-        case app::command_line_options::state::version:
+        case app::CommandLineOptions::state::version:
             std::cout << "v" << options->get_version() << std::endl;
             return EXIT_SUCCESS;
-        case app::command_line_options::state::help:
+        case app::CommandLineOptions::state::help:
             std::cout << "Help: " << options->get_help() << std::endl;
             return EXIT_SUCCESS;
         default:

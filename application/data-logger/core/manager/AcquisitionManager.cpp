@@ -10,7 +10,7 @@ AcquisitionManager::AcquisitionManager(
     std::shared_ptr<app::DataProcessingEngine> engine,
     std::shared_ptr<app::IDataWriter> writer,
     std::shared_ptr<app::ILogger> logger,
-    std::shared_ptr<app::command_line_options> options)
+    std::shared_ptr<app::CommandLineOptions> options)
     : m_device(device)
     , m_engine(engine)
     , m_writer(writer)

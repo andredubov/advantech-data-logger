@@ -5,7 +5,7 @@
 #include <regex>
 #include <boost/filesystem.hpp>
 
-app::command_line_options::command_line_options() :
+app::CommandLineOptions::CommandLineOptions() :
     m_options(),
     m_help_string(),
     m_version_string("1.0.5"),
@@ -16,7 +16,7 @@ app::command_line_options::command_line_options() :
     setup();
 }
 
-void app::command_line_options::setup()
+void app::CommandLineOptions::setup()
 {
     po::options_description general_options("General options");
     po::options_description specific_options("Specific options");
@@ -33,9 +33,9 @@ void app::command_line_options::setup()
     m_options.add(specific_options);
 }
 
-app::command_line_options::state app::command_line_options::parse(int argc, char* argv[])
+app::CommandLineOptions::state app::CommandLineOptions::parse(int argc, char* argv[])
 {
-    command_line_options::state state = state::success;
+    CommandLineOptions::state state = state::success;
 
     try
     {
@@ -86,7 +86,7 @@ app::command_line_options::state app::command_line_options::parse(int argc, char
     return state;
 }
 
-bool app::command_line_options::is_input_file_valid(const std::string & file_path)
+bool app::CommandLineOptions::is_input_file_valid(const std::string & file_path)
 {
     boost::filesystem::path path(file_path);
 
@@ -115,7 +115,7 @@ bool app::command_line_options::is_input_file_valid(const std::string & file_pat
     return true;
 }
 
-bool app::command_line_options::is_output_file_valid(const std::string & file_path)
+bool app::CommandLineOptions::is_output_file_valid(const std::string & file_path)
 {
     boost::filesystem::path path(file_path);
 
@@ -152,27 +152,27 @@ bool app::command_line_options::is_output_file_valid(const std::string & file_pa
     return true;
 }
 
-std::string app::command_line_options::get_help() const
+std::string app::CommandLineOptions::get_help() const
 {
     return m_help_string;
 }
 
-std::string app::command_line_options::get_version() const
+std::string app::CommandLineOptions::get_version() const
 {
     return m_version_string;
 }
 
-std::string app::command_line_options::get_error_message() const
+std::string app::CommandLineOptions::get_error_message() const
 {
     return m_error_message;
 }
 
-std::string app::command_line_options::get_input_file_path() const
+std::string app::CommandLineOptions::get_input_file_path() const
 {
     return m_input_file_path;
 }
 
-std::string app::command_line_options::get_output_file_path() const
+std::string app::CommandLineOptions::get_output_file_path() const
 {
     return m_output_file_path;
 }

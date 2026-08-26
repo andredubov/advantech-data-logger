@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 
-app::command_line_options::command_line_options() :
+app::CommandLineOptions::CommandLineOptions() :
     m_options(),
     m_help_string(),
     m_version_string("1.0.6"),
@@ -19,7 +19,7 @@ app::command_line_options::command_line_options() :
     setup();
 }
 
-void app::command_line_options::setup()
+void app::CommandLineOptions::setup()
 {
     po::options_description general_options("General options");
     po::options_description specific_options("Specific options");
@@ -42,9 +42,9 @@ void app::command_line_options::setup()
     m_options.add(specific_options);
 }
 
-app::command_line_options::state app::command_line_options::parse(int argc, char* argv[])
+app::CommandLineOptions::state app::CommandLineOptions::parse(int argc, char* argv[])
 {
-    command_line_options::state state = state::success;
+    CommandLineOptions::state state = state::success;
 
     try 
     {
@@ -116,7 +116,7 @@ app::command_line_options::state app::command_line_options::parse(int argc, char
     return state;
 }
 
-bool app::command_line_options::is_file_valid(const std::string & file_path)
+bool app::CommandLineOptions::is_file_valid(const std::string & file_path)
 {
     boost::filesystem::path path(file_path);
     
@@ -144,62 +144,62 @@ bool app::command_line_options::is_file_valid(const std::string & file_path)
     return true;
 }
 
-std::string app::command_line_options::get_help() const
+std::string app::CommandLineOptions::get_help() const
 {
     return m_help_string;
 }
 
-std::string app::command_line_options::get_version() const
+std::string app::CommandLineOptions::get_version() const
 {
     return m_version_string;
 }
 
-std::string app::command_line_options::get_error_message() const
+std::string app::CommandLineOptions::get_error_message() const
 {
     return m_error_message;
 }
 
-std::string app::command_line_options::get_device_description() const
+std::string app::CommandLineOptions::get_device_description() const
 {
     return m_device_description;
 }
 
-std::string app::command_line_options::get_output_file_path() const
+std::string app::CommandLineOptions::get_output_file_path() const
 {
     return m_output_file_path;
 }
 
-int app::command_line_options::get_start_channel() const
+int app::CommandLineOptions::get_start_channel() const
 {
     return m_start_channel;
 }
 
-int app::command_line_options::get_end_channel() const
+int app::CommandLineOptions::get_end_channel() const
 {
     return m_end_channel;
 }
 
-int app::command_line_options::get_channel_count() const
+int app::CommandLineOptions::get_channel_count() const
 {
     return m_end_channel - m_start_channel + 1;
 }
 
-double app::command_line_options::get_sampling_rate() const
+double app::CommandLineOptions::get_sampling_rate() const
 {
     return m_sampling_rate;
 }
 
-std::string app::command_line_options::get_input_mode() const
+std::string app::CommandLineOptions::get_input_mode() const
 {
     return m_input_mode;
 }
 
-std::string app::command_line_options::get_input_range() const
+std::string app::CommandLineOptions::get_input_range() const
 {
     return m_input_range;
 }
 
-int app::command_line_options::get_samples_per_channel() const
+int app::CommandLineOptions::get_samples_per_channel() const
 {
     return m_samples_per_channel;
 }

@@ -21,7 +21,7 @@ public:
         std::shared_ptr<app::DataProcessingEngine> engine,
         std::shared_ptr<app::IDataWriter> writer,
         std::shared_ptr<app::ILogger> logger,
-        std::shared_ptr<app::command_line_options> options
+        std::shared_ptr<app::CommandLineOptions> options
     );
     virtual ~AcquisitionManager();
 
@@ -57,7 +57,7 @@ private:
     std::shared_ptr<app::DataProcessingEngine> m_engine;
     std::shared_ptr<app::IDataWriter> m_writer;
     std::shared_ptr<app::ILogger> m_logger;
-    std::shared_ptr<app::command_line_options> m_options;
+    std::shared_ptr<app::CommandLineOptions> m_options;
 
     bool m_initialized;
     bool m_acquisitionStarted;

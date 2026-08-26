@@ -8,7 +8,7 @@ namespace app
 {
     namespace po = boost::program_options;
 
-    class command_line_options
+    class CommandLineOptions
     {
     public:
         enum class state : int
@@ -19,10 +19,10 @@ namespace app
             failure
         };
 
-        explicit command_line_options();
-        virtual ~command_line_options() = default;
-        command_line_options(const command_line_options& rhs) = delete;
-        command_line_options& operator=(const command_line_options& rhs) = delete;
+        explicit CommandLineOptions();
+        virtual ~CommandLineOptions() = default;
+        CommandLineOptions(const CommandLineOptions& rhs) = delete;
+        CommandLineOptions& operator=(const CommandLineOptions& rhs) = delete;
 
         state parse(int argc, char* argv[]);
 
