@@ -25,7 +25,14 @@ public:
     ~AdvantechDevice() override;
 
     bool initialize(const std::string& deviceDescription) override;
-    bool configure(int startChannel, int channelCount, int samplesPerChannel, double samplingRate) override;
+    bool configure(
+        int startChannel, 
+        int channelCount, 
+        int samplesPerChannel, 
+        double samplingRate, 
+        const std::string& inputMode, 
+        const std::string& inputRange) override;
+
     bool start() override;
     void stop() override;
     void dispose() override;
