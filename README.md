@@ -143,8 +143,8 @@ All code lives in the `app` namespace. Key interfaces:
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--input` | Input binary file path | Required |
-| `--output` | Output CSV file path | Required |
+| `--input-file` | Input binary file path | Required |
+| `--output-file` | Output CSV file path | Required |
 | `--help` | Show help message | — |
 | `--version` | Show version information | — |
 
