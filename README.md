@@ -430,9 +430,9 @@ data-converter.exe --input daq_data.bin --output measurements.csv
 
 This project is distributed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🤝 Contributing
 
-For hardware-related issues, consult the Advantech PCI-1716 documentation and Advantech Navigator utility.
+For discussions, ideas, and suggestions, please create an [Issue](https://github.com/andredubov/advantech-data-logger/issues) or submit a [Pull Request](https://github.com/andredubov/advantech-data-logger/pulls).
 
 ---
 
