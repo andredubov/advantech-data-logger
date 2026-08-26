@@ -2,6 +2,7 @@
 #define ADVANTECHDEVICE_HPP
 
 #include "IDataAcquisitionDevice.hpp"
+#include "AcquisitionConfig.hpp"
 #include "ILogger.hpp"
 #include "bdaqctrl.h"
 #include "compatibility.h"
@@ -25,13 +26,7 @@ public:
     ~AdvantechDevice() override;
 
     bool initialize(const std::string& deviceDescription) override;
-    bool configure(
-        int startChannel, 
-        int channelCount, 
-        int samplesPerChannel, 
-        double samplingRate, 
-        const std::string& inputMode, 
-        const std::string& inputRange) override;
+    bool configure(const AcquisitionConfig& config) override;
 
     bool start() override;
     void stop() override;

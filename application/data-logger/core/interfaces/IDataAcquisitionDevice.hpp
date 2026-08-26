@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include "AcquisitionConfig.hpp"
 
 namespace app {
 
@@ -29,15 +30,10 @@ public:
 
     /**
      * @brief Configure the device parameters
-     * @param startChannel First channel to acquire (0-15)
-     * @param channelCount Number of channels to acquire
-     * @param samplesPerChannel Buffer size in samples per channel
-     * @param samplingRate Sampling rate in Hz
-     * @param inputMode Input mode: "bipolar" or "unipolar"
-     * @param inputRange Input range: "10V", "5V", "2V", "1V"
+     * @param config Configuration parameters for acquisition
      * @return true if successful, false otherwise
      */
-    virtual bool configure(int startChannel, int channelCount, int samplesPerChannel, double samplingRate, const std::string& inputMode, const std::string& inputRange) = 0;
+    virtual bool configure(const AcquisitionConfig& config) = 0;
 
     /**
      * @brief Start data acquisition

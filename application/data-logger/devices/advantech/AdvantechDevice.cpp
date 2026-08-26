@@ -37,38 +37,38 @@ bool AdvantechDevice::initialize(const std::string& deviceDescription) {
     return true;
 }
 
-bool AdvantechDevice::configure(int startChannel, int channelCount, int samplesPerChannel, double samplingRate, const std::string& inputMode, const std::string& inputRange) {
-    m_startChannel = startChannel;
-    m_channelCount = channelCount;
-    m_samplesPerChannel = samplesPerChannel;
-    m_samplingRate = samplingRate;
+bool AdvantechDevice::configure(const AcquisitionConfig& config) {
+    m_startChannel = config.startChannel;
+    m_channelCount = config.channelCount;
+    m_samplesPerChannel = config.samplesPerChannel;
+    m_samplingRate = config.samplingRate;
 
-    m_aiCtrl->getScanChannel()->setChannelStart(startChannel);
-    m_aiCtrl->getScanChannel()->setChannelCount(channelCount);
-    m_aiCtrl->getScanChannel()->setSamples(samplesPerChannel);
-    m_aiCtrl->getConvertClock()->setRate(samplingRate);
+    m_aiCtrl->getScanChannel()->setChannelStart(config.startChannel);
+    m_aiCtrl->getScanChannel()->setChannelCount(config.channelCount);
+    m_aiCtrl->getScanChannel()->setSamples(config.samplesPerChannel);
+    m_aiCtrl->getConvertClock()->setRate(config.samplingRate);
 
     // Определяем режим и диапазон
     Automation::BDaq::ValueRange range = Automation::BDaq::ValueRange::V_0To10;
 
-    if (inputRange == "5V") {
+    if (config.inputRange == "5V") {
         range = Automation::BDaq::ValueRange::V_0To5;
-    } else if (inputRange == "2.5V") {
+    } else if (config.inputRange == "2.5V") {
         range = Automation::BDaq::ValueRange::V_0To2pt5;
-    } else if (inputRange == "1.25V") {
+    } else if (config.inputRange == "1.25V") {
         range = Automation::BDaq::ValueRange::V_0To1;
     } else {
         range = Automation::BDaq::ValueRange::V_0To10; // 0..10V default
     }
 
     // Для биполярного режима используем симметричные диапазоны
-    if (inputMode == "bipolar") 
+    if (config.inputMode == "bipolar") 
     {
-        if (inputRange == "5V") {
+        if (config.inputRange == "5V") {
             range = Automation::BDaq::ValueRange::V_Neg5To5;
-        } else if (inputRange == "2.5V") { 
+        } else if (config.inputRange == "2.5V") { 
             range = Automation::BDaq::ValueRange::V_Neg2pt5To2pt5;
-        } else if (inputRange == "1.25V") {
+        } else if (config.inputRange == "1.25V") {
             range = Automation::BDaq::ValueRange::V_Neg1pt25To1pt25;
         } else {
             range = Automation::BDaq::ValueRange::V_Neg10To10; // ±10V default
@@ -76,7 +76,7 @@ bool AdvantechDevice::configure(int startChannel, int channelCount, int samplesP
     }
 
     // Настройка диапазона для каждого канала:
-    for (int ch = startChannel; ch < startChannel + channelCount; ++ch) {
+    for (int ch = config.startChannel; ch < config.startChannel + config.channelCount; ++ch) {
         m_aiCtrl->getChannels()->getItem(ch).setValueRange(range);
     }
 

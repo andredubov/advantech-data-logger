@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
     main/src/CommandLineOptions.cpp
     core/engine/DataProcessingEngine.cpp
     core/manager/AcquisitionManager.cpp
+    core/config/AcquisitionConfig.cpp
     devices/advantech/AdvantechDevice.cpp
     storage/binary/BinaryFileWriter.cpp
     logging/src/Logger.cpp
@@ -22,6 +23,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     core/engine
     core/interfaces
     core/manager
+    core/config
     devices/advantech
     devices/factory
     logging/inc

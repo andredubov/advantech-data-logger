@@ -1,7 +1,7 @@
-#include "AcquisitionManager.hpp"
 #include <chrono>
 #include <cstdio>
 #include <iostream>
+#include "AcquisitionManager.hpp"
 
 namespace app {
 
@@ -48,7 +48,15 @@ bool AcquisitionManager::initialize() {
 
     std::string inputMode = m_options->get_input_mode();
     std::string inputRange = m_options->get_input_range();
-    if (!m_device->configure(startChannel, channelCount, samplesPerChannel, samplingRate, inputMode, inputRange)) {
+    app::AcquisitionConfig config;
+    config.startChannel = startChannel;
+    config.channelCount = channelCount;
+    config.samplesPerChannel = samplesPerChannel;
+    config.samplingRate = samplingRate;
+    config.inputMode = inputMode;
+    config.inputRange = inputRange;
+
+    if (!m_device->configure(config)) {
         m_logger->error("Failed to configure device");
         return false;
     }
