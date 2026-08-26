@@ -47,6 +47,13 @@ bool AdvantechDevice::configure(int startChannel, int channelCount, int samplesP
     m_aiCtrl->getScanChannel()->setChannelCount(channelCount);
     m_aiCtrl->getScanChannel()->setSamples(samplesPerChannel);
     m_aiCtrl->getConvertClock()->setRate(samplingRate);
+
+    // Настройка диапазона для каждого канала:
+    for (int ch = startChannel; ch < startChannel + channelCount; ++ch) {
+        // Устанавливаем униполярный режим 0..10 Вольт
+        m_aiCtrl->getChannels()->getItem(ch).setValueRange(Automation::BDaq::ValueRange::V_0To10);
+    }
+
     return true;
 }
 
