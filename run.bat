@@ -44,6 +44,8 @@ echo [--end-channel]   Last channel (0-15)
 echo [--rate]          Sampling rate in Hz (max 250000)
 echo [--samples]       Samples per channel
 echo [--output]        Output binary file name
+echo [--input-mode]    Input mode: bipolar or unipolar
+echo [--input-range]   Input range: 10V, 5V, 2.5V, 1.25V
 echo.
 echo Press Enter to use default values, or type your value.
 echo.
@@ -72,6 +74,14 @@ set OUTPUT=
 set /p OUTPUT="Output file [daq_data.bin]: "
 if "!OUTPUT!"=="" set OUTPUT=daq_data.bin
 
+set INPUT_MODE=
+set /p INPUT_MODE="Input mode [unipolar]: "
+if "!INPUT_MODE!"=="" set INPUT_MODE=unipolar
+
+set INPUT_RANGE=
+set /p INPUT_RANGE="Input range [10V]: "
+if "!INPUT_RANGE!"=="" set INPUT_RANGE=10V
+
 echo.
 echo Running data-logger with:
 echo   --device       !DEVICE!
@@ -80,8 +90,10 @@ echo   --end-channel   !END_CH!
 echo   --rate          !RATE!
 echo   --samples       !SAMPLES!
 echo   --output        !OUTPUT!
+echo   --input-mode    !INPUT_MODE!
+echo   --input-range   !INPUT_RANGE!
 echo.
-"%LOGGER_EXE%" --device "!DEVICE!" --start-channel !START_CH! --end-channel !END_CH! --rate !RATE! --samples-per-channel !SAMPLES! --output "!OUTPUT!"
+"%LOGGER_EXE%" --device "!DEVICE!" --start-channel !START_CH! --end-channel !END_CH! --rate !RATE! --samples-per-channel !SAMPLES! --output "!OUTPUT!" --input-mode "!INPUT_MODE!" --input-range "!INPUT_RANGE!"
 if errorlevel 1 (
     echo.
     echo data-logger exited with error code %errorlevel%
