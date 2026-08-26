@@ -224,7 +224,7 @@ sequenceDiagram
     Main->>Manager: initialize()
     Manager->>Device: initialize(deviceDescription)
     Device-->>Manager: true
-    Manager->>Device: configure(...)
+    Manager->>Device: configure(config)
     Device-->>Manager: true
     Manager->>Engine: start()
     Engine->>Engine: start writer thread
