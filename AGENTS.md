@@ -82,12 +82,14 @@ All configuration is done via command-line arguments. Run `data-logger.exe --hel
 | `--rate` | Sampling rate in Hz (max 250000) | `250000` |
 | `--samples-per-channel` | Buffer size in samples per channel | `25000` |
 | `--output` | Output binary file name | `daq_data.bin` |
+| `--input-mode` | Input mode: `bipolar` or `unipolar` | `bipolar` |
+| `--input-range` | Input range: `10V`, `5V`, `2.5V`, `1.25V` | `10V` |
 | `--help` | Show help | — |
 | `--version` | Show version | — |
 
 Example:
 ```bash
-data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000
+data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000 --input-mode unipolar --input-range 10V
 ```
 
 ## Common Issues
