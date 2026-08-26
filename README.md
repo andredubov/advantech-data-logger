@@ -46,7 +46,7 @@ Select option 1 and follow the prompts to configure acquisition parameters.
 
 Or run directly:
 ```bash
-data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000 --output daq_data.bin
+data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000 --output daq_data.bin --input-mode unipolar --input-range 10V
 ```
 
 ### Convert Binary to CSV
@@ -136,6 +136,8 @@ All code lives in the `app` namespace. Key interfaces:
 | `--rate` | Sampling rate in Hz (max 250000) | `250000` |
 | `--samples-per-channel` | Buffer size in samples per channel | `25000` |
 | `--output` | Output binary file name | `daq_data.bin` |
+| `--input-mode` | Input mode: `bipolar` or `unipolar` | `bipolar` |
+| `--input-range` | Input range: `10V`, `5V`, `2.5V`, `1.25V` | `10V` |
 
 ### Data Converter Command-Line Arguments
 
@@ -176,7 +178,7 @@ data-converter.exe --input daq_data.bin --output measurements.csv
 
 ## License
 
-Proprietary - All rights reserved.
+This project is distributed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Support
 
