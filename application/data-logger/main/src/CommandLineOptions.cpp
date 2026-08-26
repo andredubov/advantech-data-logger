@@ -34,7 +34,9 @@ void app::command_line_options::setup()
         ("end-channel", po::value<long>(&m_end_channel)->default_value(15), "End channel (0-15)")
         ("rate", po::value<double>(&m_sampling_rate)->default_value(250000.0), "Sampling rate in Hz (max 250000)")
         ("samples-per-channel", po::value<long>(&m_samples_per_channel)->default_value(25000), "Number of samples per channel in the buffer")
-        ("output", po::value<std::string>(&m_output_file_path)->default_value("daq_data.bin"), "Output binary file name");
+        ("output", po::value<std::string>(&m_output_file_path)->default_value("daq_data.bin"), "Output binary file name")
+        ("input-mode", po::value<std::string>(&m_input_mode)->default_value("unipolar"), "Input mode: bipolar or unipolar")
+        ("input-range", po::value<std::string>(&m_input_range)->default_value("10V"), "Input range: 10V, 5V, 2.5V, 1.25V");
 
     m_options.add(general_options);
     m_options.add(specific_options);
@@ -185,6 +187,16 @@ int app::command_line_options::get_channel_count() const
 double app::command_line_options::get_sampling_rate() const
 {
     return m_sampling_rate;
+}
+
+std::string app::command_line_options::get_input_mode() const
+{
+    return m_input_mode;
+}
+
+std::string app::command_line_options::get_input_range() const
+{
+    return m_input_range;
 }
 
 int app::command_line_options::get_samples_per_channel() const

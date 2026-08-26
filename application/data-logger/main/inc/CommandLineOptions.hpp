@@ -36,7 +36,8 @@ namespace app
         virtual double get_sampling_rate() const;
         virtual int get_samples_per_channel() const;
         virtual std::string get_output_file_path() const;
-
+        std::string get_input_mode() const;
+        std::string get_input_range() const;
 
     protected:
         virtual void setup();
@@ -50,6 +51,8 @@ namespace app
         std::string m_error_message;
         std::string m_device_description;
         std::string m_output_file_path;
+        std::string m_input_mode;
+        std::string m_input_range;
         long m_start_channel;
         long m_end_channel;
         double m_sampling_rate;
