@@ -106,6 +106,148 @@ The data logger uses a multithreaded architecture:
 2. **Callback thread**: Executes in the Advantech driver context, receives hardware interrupts, and pushes data to the queue
 3. **Writer thread**: Reads from the queue and writes samples to a binary file
 
+#### Class Diagram
+
+```mermaid
+classDiagram
+    class IDataAcquisitionDevice {
+        <<interface>>
+        +initialize(deviceDescription) bool
+        +configure(startChannel, channelCount, samplesPerChannel, samplingRate, inputMode, inputRange) bool
+        +start() bool
+        +stop() void
+        +dispose() void
+        +setDataReadyCallback(callback) void
+        +isRunning() const bool
+    }
+
+    class AdvantechDevice {
+        -m_logger: ILogger
+        -m_device: InstantAiCtrl*
+        -m_aiCtrl: AiCtrl*
+        -m_isRunning: atomic~bool~
+        -m_callback: DataReadyCallback
+        +initialize(deviceDescription) bool
+        +configure(...) bool
+        +start() bool
+        +stop() void
+        +dispose() void
+        +setDataReadyCallback(callback) void
+        +isRunning() const bool
+        -onDataReady(device, data) void
+    }
+
+    class ILogger {
+        <<interface>>
+        +error(message) void
+        +warning(message) void
+        +info(message) void
+        +debug(message) void
+    }
+
+    class Logger {
+        -m_logLevel: LogLevel
+        +error(message) void
+        +warning(message) void
+        +info(message) void
+        +debug(message) void
+    }
+
+    class DataProcessingEngine {
+        -m_queue: queue~vector~double~~
+        -m_mutex: mutex
+        -m_cv: condition_variable
+        -m_writer: IDataWriter
+        -m_logger: ILogger
+        -m_isRunning: atomic~bool~
+        +pushData(data) void
+        +start() void
+        +stop() void
+        -writerThread() void
+    }
+
+    class IDataWriter {
+        <<interface>>
+        +open(filePath) bool
+        +write(data) bool
+        +close() void
+        +isOpen() const bool
+    }
+
+    class BinaryFileWriter {
+        -m_fileStream: ofstream
+        -m_logger: ILogger
+        -m_isOpen: bool
+        +open(filePath) bool
+        +write(data) bool
+        +close() void
+        +isOpen() const bool
+    }
+
+    class AcquisitionManager {
+        -m_device: IDataAcquisitionDevice
+        -m_engine: DataProcessingEngine
+        -m_writer: IDataWriter
+        -m_logger: ILogger
+        -m_options: CommandLineOptions
+        +initialize() bool
+        +startAcquisition() bool
+        +waitForStop() void
+        +stopAcquisition() void
+        +shutdown() void
+    }
+
+    IDataAcquisitionDevice <|.. AdvantechDevice : implements
+    ILogger <|.. Logger : implements
+    IDataWriter <|.. BinaryFileWriter : implements
+    AcquisitionManager --> IDataAcquisitionDevice : uses
+    AcquisitionManager --> DataProcessingEngine : uses
+    AcquisitionManager --> IDataWriter : uses
+    AcquisitionManager --> ILogger : uses
+    AdvantechDevice --> ILogger : uses
+    DataProcessingEngine --> IDataWriter : uses
+    DataProcessingEngine --> ILogger : uses
+    BinaryFileWriter --> ILogger : uses
+```
+
+#### Sequence Diagram (Data Acquisition)
+
+```mermaid
+sequenceDiagram
+    participant Main as Main Thread
+    participant Manager as AcquisitionManager
+    participant Device as AdvantechDevice
+    participant Engine as DataProcessingEngine
+    participant Writer as BinaryFileWriter
+    participant Driver as Advantech Driver
+
+    Main->>Manager: initialize()
+    Manager->>Device: initialize(deviceDescription)
+    Device-->>Manager: true
+    Manager->>Device: configure(...)
+    Device-->>Manager: true
+    Manager->>Engine: start()
+    Engine->>Engine: start writer thread
+    Manager->>Manager: waitForStop()
+    Manager->>Device: setDataReadyCallback(onDataReady)
+    Manager->>Device: start()
+
+    loop Until stop
+        Driver->>Device: onDataReady(data)
+        Device->>Engine: pushData(data)
+        Engine->>Engine: enqueue data
+        Engine->>Engine: notify writer thread
+        Engine->>Writer: write(data)
+        Writer->>Writer: write to binary file
+    end
+
+    Main->>Manager: stopAcquisition()
+    Manager->>Device: stop()
+    Manager->>Engine: stop()
+    Engine->>Engine: stop writer thread
+    Manager->>Device: dispose()
+```
+
 ### Data Converter
 
 The converter reads binary files and generates CSV output with timestamps:
@@ -113,6 +255,114 @@ The converter reads binary files and generates CSV output with timestamps:
 - Binary files store raw `double` samples with no headers
 - Timestamps are computed from the sampling rate
 - Output uses Russian locale (comma decimal separator)
+
+#### Class Diagram
+
+```mermaid
+classDiagram
+    class IDataReader {
+        <<interface>>
+        +open(filePath) bool
+        +readHeader(header) bool
+        +readFrames(frames, maxFrames) bool
+        +getTotalFrames() size_t
+        +isOpen() const bool
+        +close() void
+    }
+
+    class BinaryReader {
+        -m_fileStream: ifstream
+        -m_filePath: string
+        -m_isOpen: bool
+        -m_totalFrames: size_t
+        -m_header: DataHeader
+        +open(filePath) bool
+        +readHeader(header) bool
+        +readFrames(frames, maxFrames) bool
+        +getTotalFrames() size_t
+        +isOpen() const bool
+        +close() void
+    }
+
+    class IDataWriter {
+        <<interface>>
+        +open(filePath) bool
+        +write(data) bool
+        +close() void
+        +isOpen() const bool
+    }
+
+    class CsvWriter {
+        -m_fileStream: ofstream
+        -m_isOpen: bool
+        -m_separator: char
+        -m_decimalSeparator: char
+        +open(filePath) bool
+        +write(data) bool
+        +close() void
+        +isOpen() const bool
+    }
+
+    class ITimeFormatter {
+        <<interface>>
+        +format(timeSeconds) string
+    }
+
+    class TimeFormatter {
+        -m_locale: locale
+        -m_format: string
+        +format(timeSeconds) string
+    }
+
+    class DataConverter {
+        -m_reader: IDataReader
+        -m_writer: IDataWriter
+        -m_formatter: ITimeFormatter
+        +convert(inputPath, outputPath) bool
+        -processFrames() bool
+    }
+
+    IDataReader <|.. BinaryReader : implements
+    IDataWriter <|.. CsvWriter : implements
+    ITimeFormatter <|.. TimeFormatter : implements
+    DataConverter --> IDataReader : uses
+    DataConverter --> IDataWriter : uses
+    DataConverter --> ITimeFormatter : uses
+```
+
+#### Sequence Diagram (Conversion Process)
+
+```mermaid
+sequenceDiagram
+    participant Main as Main
+    participant Converter as DataConverter
+    participant Reader as BinaryReader
+    participant Writer as CsvWriter
+    participant Formatter as TimeFormatter
+
+    Main->>Converter: convert(inputPath, outputPath)
+    Converter->>Reader: open(inputPath)
+    Reader-->>Converter: true
+    Converter->>Reader: readHeader(header)
+    Reader-->>Converter: header
+    Converter->>Writer: open(outputPath)
+    Writer-->>Converter: true
+
+    loop Read all frames
+        Converter->>Reader: readFrames(frames, batchSize)
+        Reader-->>Converter: frames vector
+        loop Each frame
+            Converter->>Formatter: format(frame.time)
+            Formatter-->>Converter: timestamp string
+            Converter->>Writer: write(frame)
+            Writer->>Writer: write CSV row
+        end
+    end
+
+    Converter->>Reader: close()
+    Converter->>Writer: close()
+    Converter-->>Main: true
+```
 
 ### Component Interfaces
 
