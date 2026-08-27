@@ -46,7 +46,7 @@ Select option 1 and follow the prompts to configure acquisition parameters.
 
 Or run directly:
 ```bash
-data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 250000 --samples-per-channel=25000 --output daq_data.bin --input-mode unipolar --input-range 10V
+data-logger.exe --device=PCI-1716,BID#0 --start-channel=0 --end-channel=7 --rate=250000 --samples-per-channel=25000 --output=daq_data.bin --input-mode=unipolar --input-range=10V
 ```
 
 ### Convert Binary to CSV
@@ -59,7 +59,7 @@ Select option 2 and follow the prompts to convert binary files to CSV.
 
 Or run directly:
 ```bash
-data-converter.exe --input-file daq_data.bin --output-file daq_data.csv
+data-converter.exe --input-file=daq_data.bin --output-file=daq_data.csv
 ```
 
 ### Interactive Launcher (`run.bat`)
@@ -400,7 +400,7 @@ All code lives in the `app` namespace. Key interfaces:
 
 Example:
 ```bash
-data-converter.exe --input daq_data.bin --output measurements.csv
+data-converter.exe --input-file=daq_data.bin --output-file=daq_data.csv
 ```
 
 > **Note:** The converter uses Russian locale by default. CSV uses semicolon (`;`) as field separator and comma (`,`) as decimal separator for proper Excel compatibility. Time format is `DD.MM.YYYY HH:MM:SS,mmm` with milliseconds separated by comma.
