@@ -46,7 +46,7 @@ Select option 1 and follow the prompts to configure acquisition parameters.
 
 Or run directly:
 ```bash
-data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 100000 --output daq_data.bin --input-mode unipolar --input-range 10V
+data-logger.exe --device PCI-1716,BID#0 --start-channel 0 --end-channel 7 --rate 250000 --samples-per-channel=25000 --output daq_data.bin --input-mode unipolar --input-range 10V
 ```
 
 ### Convert Binary to CSV
@@ -59,7 +59,7 @@ Select option 2 and follow the prompts to convert binary files to CSV.
 
 Or run directly:
 ```bash
-data-converter.exe --input daq_data.bin --output daq_data.csv
+data-converter.exe --input-file daq_data.bin --output-file daq_data.csv
 ```
 
 ### Interactive Launcher (`run.bat`)
@@ -386,15 +386,15 @@ All code lives in the `app` namespace. Key interfaces:
 | `--rate` | Sampling rate in Hz (max 250000) | `250000` |
 | `--samples-per-channel` | Buffer size in samples per channel | `25000` |
 | `--output` | Output binary file name | `daq_data.bin` |
-| `--input-mode` | Input mode: `bipolar` or `unipolar` | `bipolar` |
+| `--input-mode` | Input mode: `bipolar` or `unipolar` | `unipolar` |
 | `--input-range` | Input range: `10V`, `5V`, `2.5V`, `1.25V` | `10V` |
 
 ### Data Converter Command-Line Arguments
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--input-file` | Input binary file path | Required |
-| `--output-file` | Output CSV file path | Required |
+| `--input-file` | Input binary file path | daq_data.bin |
+| `--output-file` | Output CSV file path | daq_data.csv |
 | `--help` | Show help message | — |
 | `--version` | Show version information | — |
 
