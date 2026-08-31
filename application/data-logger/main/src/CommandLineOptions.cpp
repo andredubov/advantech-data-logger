@@ -7,7 +7,7 @@
 app::CommandLineOptions::CommandLineOptions() :
     m_options(),
     m_help_string(),
-    m_version_string("1.0.6"),
+    m_version_string("1.0.7"),
     m_error_message(),
     m_device_description(),
     m_output_file_path(),
