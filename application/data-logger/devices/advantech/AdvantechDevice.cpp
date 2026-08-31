@@ -56,7 +56,7 @@ bool AdvantechDevice::configure(const AcquisitionConfig& config) {
     } else if (config.inputRange == "2.5V") {
         range = Automation::BDaq::ValueRange::V_0To2pt5;
     } else if (config.inputRange == "1.25V") {
-        range = Automation::BDaq::ValueRange::V_0To1;
+        range = Automation::BDaq::ValueRange::V_0To1pt25;
     } else {
         range = Automation::BDaq::ValueRange::V_0To10; // 0..10V default
     }
@@ -69,7 +69,7 @@ bool AdvantechDevice::configure(const AcquisitionConfig& config) {
         } else if (config.inputRange == "2.5V") { 
             range = Automation::BDaq::ValueRange::V_Neg2pt5To2pt5;
         } else if (config.inputRange == "1.25V") {
-            range = Automation::BDaq::ValueRange::V_Neg1pt25To1pt25;
+            range = Automation::BDaq::ValueRange::V_0To1pt25;
         } else {
             range = Automation::BDaq::ValueRange::V_Neg10To10; // ±10V default
         }
